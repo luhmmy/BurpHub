@@ -1,0 +1,43 @@
+# Build artifacts
+target/
+*.jar
+!BurpHub.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# Database
+.burphub/
+*.db
+*.mv.db
+*.trace.db
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Python (dashboard)
+dashboard/__pycache__/
+dashboard/*.pyc
+dashboard/.env
+dashboard/venv/
+dashboard/env/
+
+# Node modules (if any)
+node_modules/

@@ -1,0 +1,41 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.burphub'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Burp Suite Extender API (provided at runtime by Burp)
+    compileOnly 'net.portswigger.burp.extender:burp-extender-api:2.3'
+    
+    // SQLite JDBC Driver (bundled in JAR)
+    implementation 'org.xerial:sqlite-jdbc:3.45.1.0'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src']
+        }
+    }
+}
+
+// Create fat JAR with dependencies
+jar {
+    archiveBaseName = 'BurpHub'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
