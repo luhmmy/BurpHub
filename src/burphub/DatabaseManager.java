@@ -93,8 +93,8 @@ public class DatabaseManager {
                 // User settings and profile info
                 """
                         CREATE TABLE IF NOT EXISTS settings (
-                            key TEXT PRIMARY KEY,
-                            value TEXT
+                            setting_key TEXT PRIMARY KEY,
+                            setting_value TEXT
                         )
                         """
         };
@@ -743,12 +743,12 @@ public class DatabaseManager {
      * Get a setting value
      */
     public String getSetting(String key, String defaultValue) throws SQLException {
-        String sql = "SELECT value FROM settings WHERE key = ?";
+        String sql = "SELECT setting_value FROM settings WHERE setting_key = ?";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, key);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getString("value");
+                    return rs.getString("setting_value");
                 }
             }
         }
@@ -759,7 +759,7 @@ public class DatabaseManager {
      * Update or insert a setting
      */
     public void setSetting(String key, String value) throws SQLException {
-        String sql = "MERGE INTO settings (key, value) KEY(key) VALUES (?, ?)";
+        String sql = "MERGE INTO settings (setting_key, setting_value) KEY(setting_key) VALUES (?, ?)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, key);
             pstmt.setString(2, value);
