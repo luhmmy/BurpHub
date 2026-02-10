@@ -47,6 +47,11 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
             tracker = new ActivityTracker(database);
             stdout.println("[+] Activity tracker started");
 
+            // Track session start (MUST happen before UI initialization to update streak)
+            sessionStartTime = System.currentTimeMillis();
+            tracker.recordSessionStart();
+            stdout.println("[+] Session tracking started");
+
             // Initialize UI tab
             uiTab = new BurpHubTab(callbacks, database, tracker);
             callbacks.addSuiteTab(this);
@@ -58,11 +63,6 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
             callbacks.registerExtensionStateListener(this);
             callbacks.registerScopeChangeListener(this);
             stdout.println("[+] Listeners registered");
-
-            // Track session start
-            sessionStartTime = System.currentTimeMillis();
-            tracker.recordSessionStart();
-            stdout.println("[+] Session tracking started");
 
             stdout.println("\n[*] BurpHub is ready! Check the 'BurpHub' tab for stats.");
 

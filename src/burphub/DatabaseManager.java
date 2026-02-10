@@ -296,10 +296,23 @@ public class DatabaseManager {
                 ResultSet rs = stmt.executeQuery(sql)) {
 
             if (rs.next()) {
-                return new StreakInfo(
-                        rs.getInt("current_streak"),
-                        rs.getInt("longest_streak"),
-                        rs.getString("last_active_date"));
+                int currentStreak = rs.getInt("current_streak");
+                int longestStreak = rs.getInt("longest_streak");
+                String lastActive = rs.getString("last_active_date");
+
+                // Check if streak is stale (more than 1 day since last activity)
+                if (lastActive != null) {
+                    LocalDate lastActiveDate = LocalDate.parse(lastActive, DATE_FORMAT);
+                    long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(lastActiveDate, LocalDate.now());
+
+                    if (daysBetween > 1) {
+                        // More than 1 day has passed, the current streak is effectively 0
+                        // until a new session starts it at 1.
+                        currentStreak = 0;
+                    }
+                }
+
+                return new StreakInfo(currentStreak, longestStreak, lastActive);
             }
         }
 
