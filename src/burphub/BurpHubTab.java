@@ -545,7 +545,7 @@ public class BurpHubTab {
 
         public SignalChartPanel() {
             setBackground(BG_CARD);
-            setPreferredSize(new Dimension(250, 0));
+            setPreferredSize(new Dimension(380, 0));
             setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
         }
 
