@@ -117,10 +117,36 @@ public class BurpHubTab {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(BG_DARK);
 
-        // Title
-        JLabel titleLabel = new JLabel("🔥 BurpHub");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
-        titleLabel.setForeground(TEXT_PRIMARY);
+        // Title with gradient red text
+        JPanel gradientTitle = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+                // Fire emoji
+                g2d.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 28));
+                g2d.setColor(Color.WHITE);
+                g2d.drawString("\uD83D\uDD25", 0, 30);
+
+                // Gradient text "BurpHub"
+                g2d.setFont(new Font("Segoe UI", Font.BOLD, 28));
+                java.awt.GradientPaint gp = new java.awt.GradientPaint(
+                        35, 0, new Color(255, 60, 60),
+                        200, 0, new Color(180, 20, 50));
+                g2d.setPaint(gp);
+                g2d.drawString("BurpHub", 38, 30);
+            }
+
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(250, 38);
+            }
+        };
+        gradientTitle.setBackground(BG_DARK);
+        gradientTitle.setOpaque(true);
 
         JLabel subtitleLabel = new JLabel("Track your security testing activity");
         subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
@@ -129,7 +155,7 @@ public class BurpHubTab {
         JPanel titlePanel = new JPanel();
         titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
         titlePanel.setBackground(BG_DARK);
-        titlePanel.add(titleLabel);
+        titlePanel.add(gradientTitle);
         titlePanel.add(Box.createVerticalStrut(5));
         titlePanel.add(subtitleLabel);
 
