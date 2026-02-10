@@ -89,6 +89,13 @@ public class DatabaseManager {
                             longest_streak INTEGER DEFAULT 0,
                             last_active_date TEXT
                         )
+                        """,
+                // User settings and profile info
+                """
+                        CREATE TABLE IF NOT EXISTS settings (
+                            key TEXT PRIMARY KEY,
+                            value TEXT
+                        )
                         """
         };
 
@@ -730,5 +737,58 @@ public class DatabaseManager {
         return new YearlyWrap(year, totalRequests, topTool, topToolCount,
                 mostActiveDay, mostActiveDayCount, mostActiveMonth, mostActiveMonthCount,
                 totalMinutes, activeDays, longestStreak, monthlyTotals);
+    }
+
+    /**
+     * Get a setting value
+     */
+    public String getSetting(String key, String defaultValue) throws SQLException {
+        String sql = "SELECT value FROM settings WHERE key = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, key);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("value");
+                }
+            }
+        }
+        return defaultValue;
+    }
+
+    /**
+     * Update or insert a setting
+     */
+    public void setSetting(String key, String value) throws SQLException {
+        String sql = "MERGE INTO settings (key, value) KEY(key) VALUES (?, ?)";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, key);
+            pstmt.setString(2, value);
+            pstmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Data class for user profile
+     */
+    public static class UserProfile {
+        public String handle;
+        public String bio;
+        public String github;
+
+        public UserProfile(String handle, String bio, String github) {
+            this.handle = handle;
+            this.bio = bio;
+            this.github = github;
+        }
+    }
+
+    /**
+     * Get user profile info
+     */
+    public UserProfile getUserProfile() throws SQLException {
+        return new UserProfile(
+                getSetting("profile_handle", ""),
+                getSetting("profile_bio", ""),
+                getSetting("profile_github", ""));
     }
 }

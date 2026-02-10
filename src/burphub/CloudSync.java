@@ -87,6 +87,14 @@ public class CloudSync {
 
         json.append("},");
 
+        // Add profile info
+        json.append("\"profile\":{");
+        DatabaseManager.UserProfile profile = database.getUserProfile();
+        json.append("\"handle\":\"").append(escapeJson(profile.handle)).append("\",");
+        json.append("\"bio\":\"").append(escapeJson(profile.bio)).append("\",");
+        json.append("\"github\":\"").append(escapeJson(profile.github)).append("\"");
+        json.append("},");
+
         // Add streak info
         json.append("\"streak\":{");
         DatabaseManager.StreakInfo streak = database.getStreakInfo();

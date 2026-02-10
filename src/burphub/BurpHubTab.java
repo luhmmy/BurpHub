@@ -120,6 +120,10 @@ public class BurpHubTab {
         WrapPanel wrapPanel = new WrapPanel(database);
         tabbedPane.addTab("\uD83C\uDFB5 Wrapped", wrapPanel);
 
+        // --- Tab 3: Settings ---
+        JPanel settingsPanel = createSettingsPanel();
+        tabbedPane.addTab("\u2699 Settings", settingsPanel);
+
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
 
         // Initial data load
@@ -661,5 +665,102 @@ public class BurpHubTab {
                 g2d.drawString(label, xPoints[i] - 12, padTop + chartH + 15);
             }
         }
+    }
+
+    private JPanel createSettingsPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(BG_DARK);
+        panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
+
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setBackground(BG_CARD);
+        formPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(60, 60, 60), 1),
+                BorderFactory.createEmptyBorder(25, 25, 25, 25)));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+
+        JLabel title = new JLabel("Profile Settings");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        title.setForeground(TEXT_PRIMARY);
+        gbc.gridwidth = 2;
+        formPanel.add(title, gbc);
+
+        gbc.gridwidth = 1;
+        gbc.gridy++;
+        addSettingField(formPanel, gbc, "Display Handle:", "profile_handle", "e.g. @bugbounty_hunter");
+        gbc.gridy++;
+        addSettingField(formPanel, gbc, "Profile Bio:", "profile_bio",
+                "e.g. Pwnard of systems | Web Security Researcher");
+        gbc.gridy++;
+        addSettingField(formPanel, gbc, "GitHub URL:", "profile_github", "e.g. https://github.com/username");
+
+        gbc.gridy++;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(30, 10, 10, 10);
+        JButton saveButton = new JButton("Save Profile");
+        saveButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        saveButton.setBackground(new Color(220, 38, 38));
+        saveButton.setForeground(Color.WHITE);
+        saveButton.setFocusPainted(false);
+        saveButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+
+        saveButton.addActionListener(e -> {
+            try {
+                Component[] components = formPanel.getComponents();
+                for (Component cmp : components) {
+                    if (cmp instanceof JTextField) {
+                        JTextField tf = (JTextField) cmp;
+                        String key = (String) tf.getClientProperty("setting_key");
+                        if (key != null) {
+                            database.setSetting(key, tf.getText());
+                        }
+                    }
+                }
+                JOptionPane.showMessageDialog(panel, "Profile saved successfully!", "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(panel, "Error saving profile: " + ex.getMessage(), "Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        formPanel.add(saveButton, gbc);
+
+        JPanel wrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        wrapper.setOpaque(false);
+        wrapper.add(formPanel);
+        panel.add(wrapper, BorderLayout.NORTH);
+
+        return panel;
+    }
+
+    private void addSettingField(JPanel panel, GridBagConstraints gbc, String labelText, String settingKey,
+            String placeholder) {
+        JLabel label = new JLabel(labelText);
+        label.setForeground(TEXT_SECONDARY);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        gbc.gridx = 0;
+        panel.add(label, gbc);
+
+        JTextField field = new JTextField(25);
+        field.setBackground(new Color(13, 17, 23));
+        field.setForeground(TEXT_PRIMARY);
+        field.setCaretColor(TEXT_PRIMARY);
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(60, 60, 60)),
+                BorderFactory.createEmptyBorder(5, 8, 5, 8)));
+        field.putClientProperty("setting_key", settingKey);
+
+        try {
+            field.setText(database.getSetting(settingKey, ""));
+        } catch (SQLException e) {
+            /* ignore */ }
+
+        gbc.gridx = 1;
+        panel.add(field, gbc);
     }
 }
