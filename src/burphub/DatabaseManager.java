@@ -6,7 +6,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Set;
 
 /**
- * DatabaseManager - Handles SQLite database operations for BurpHub
+ * DatabaseManager - Handles H2 database operations for BurpHub
  */
 public class DatabaseManager {
 

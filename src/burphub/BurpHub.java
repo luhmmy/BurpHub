@@ -76,7 +76,7 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
     }
 
     /**
-     * Get the data directory for storing the SQLite database
+     * Get the data directory for storing the H2 database
      */
     private String getDataPath() {
         String userHome = System.getProperty("user.home");
