@@ -79,9 +79,21 @@ public class BurpHubTab {
         tabbedPane.setForeground(TEXT_PRIMARY);
         tabbedPane.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 13));
 
-        // --- Tab 1: Dashboard (existing layout) ---
-        JPanel dashboardPanel = new JPanel(new BorderLayout(0, 20));
-        dashboardPanel.setBackground(BG_DARK);
+        // --- Tab 1: Dashboard (existing layout) with gradient background ---
+        JPanel dashboardPanel = new JPanel(new BorderLayout(0, 20)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                java.awt.GradientPaint gp = new java.awt.GradientPaint(
+                        0, 0, new Color(30, 30, 30),
+                        getWidth(), getHeight(), new Color(42, 21, 21));
+                g2d.setPaint(gp);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+        dashboardPanel.setOpaque(false);
         dashboardPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         // Header
@@ -90,7 +102,7 @@ public class BurpHubTab {
 
         // Center content
         JPanel centerPanel = new JPanel(new BorderLayout(0, 20));
-        centerPanel.setBackground(BG_DARK);
+        centerPanel.setOpaque(false);
 
         // Heatmap section
         JPanel heatmapSection = createHeatmapSection();
@@ -116,7 +128,7 @@ public class BurpHubTab {
 
     private JPanel createHeaderPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(BG_DARK);
+        panel.setOpaque(false);
 
         // Title with gradient red text
         JPanel gradientTitle = new JPanel() {
@@ -146,8 +158,7 @@ public class BurpHubTab {
                 return new Dimension(250, 38);
             }
         };
-        gradientTitle.setBackground(BG_DARK);
-        gradientTitle.setOpaque(true);
+        gradientTitle.setOpaque(false);
 
         JLabel subtitleLabel = new JLabel("Track your security testing activity");
         subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
@@ -155,14 +166,14 @@ public class BurpHubTab {
 
         JPanel titlePanel = new JPanel();
         titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
-        titlePanel.setBackground(BG_DARK);
+        titlePanel.setOpaque(false);
         titlePanel.add(gradientTitle);
         titlePanel.add(Box.createVerticalStrut(5));
         titlePanel.add(subtitleLabel);
 
         // Streak display
         JPanel streakPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 0));
-        streakPanel.setBackground(BG_DARK);
+        streakPanel.setOpaque(false);
 
         streakLabel = createStreakBadge("🔥 0 day streak", ACCENT_ORANGE);
         longestStreakLabel = createStreakBadge("🏆 Best: 0 days", TEXT_SECONDARY);
@@ -239,7 +250,7 @@ public class BurpHubTab {
 
     private JPanel createStatsPanel() {
         JPanel panel = new JPanel(new GridLayout(1, 2, 20, 0));
-        panel.setBackground(BG_DARK);
+        panel.setOpaque(false);
 
         // Left column - Today's stats
         JPanel todayPanel = createTodayStatsPanel();
