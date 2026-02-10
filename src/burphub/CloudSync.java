@@ -57,33 +57,33 @@ public class CloudSync {
         json.append("\"daily_stats\":{");
 
         Connection conn = database.getConnection();
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery("SELECT * FROM daily_stats ORDER BY date DESC LIMIT 90");
+        try (Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery("SELECT * FROM daily_stats ORDER BY date DESC LIMIT 90")) {
 
-        boolean first = true;
-        while (rs.next()) {
-            if (!first)
-                json.append(",");
-            first = false;
+            boolean first = true;
+            while (rs.next()) {
+                if (!first)
+                    json.append(",");
+                first = false;
 
-            String date = rs.getString("date");
-            json.append("\"").append(date).append("\":{");
-            json.append("\"intercepted_requests\":").append(rs.getInt("intercepted_requests")).append(",");
-            json.append("\"repeater_requests\":").append(rs.getInt("repeater_requests")).append(",");
-            json.append("\"intruder_requests\":").append(rs.getInt("intruder_requests")).append(",");
-            json.append("\"scanner_requests\":").append(rs.getInt("scanner_requests")).append(",");
-            json.append("\"spider_requests\":").append(rs.getInt("spider_requests")).append(",");
-            json.append("\"decoder_operations\":").append(rs.getInt("decoder_operations")).append(",");
-            json.append("\"comparer_operations\":").append(rs.getInt("comparer_operations")).append(",");
-            json.append("\"sequencer_operations\":").append(rs.getInt("sequencer_operations")).append(",");
-            json.append("\"extender_events\":").append(rs.getInt("extender_events")).append(",");
-            json.append("\"target_additions\":").append(rs.getInt("target_additions")).append(",");
-            json.append("\"logger_requests\":").append(rs.getInt("logger_requests")).append(",");
-            json.append("\"session_minutes\":").append(rs.getInt("session_minutes")).append(",");
-            json.append("\"sessions_count\":").append(rs.getInt("sessions_count"));
-            json.append("}");
+                String date = rs.getString("date");
+                json.append("\"").append(date).append("\":{");
+                json.append("\"intercepted_requests\":").append(rs.getInt("intercepted_requests")).append(",");
+                json.append("\"repeater_requests\":").append(rs.getInt("repeater_requests")).append(",");
+                json.append("\"intruder_requests\":").append(rs.getInt("intruder_requests")).append(",");
+                json.append("\"scanner_requests\":").append(rs.getInt("scanner_requests")).append(",");
+                json.append("\"spider_requests\":").append(rs.getInt("spider_requests")).append(",");
+                json.append("\"decoder_operations\":").append(rs.getInt("decoder_operations")).append(",");
+                json.append("\"comparer_operations\":").append(rs.getInt("comparer_operations")).append(",");
+                json.append("\"sequencer_operations\":").append(rs.getInt("sequencer_operations")).append(",");
+                json.append("\"extender_events\":").append(rs.getInt("extender_events")).append(",");
+                json.append("\"target_additions\":").append(rs.getInt("target_additions")).append(",");
+                json.append("\"logger_requests\":").append(rs.getInt("logger_requests")).append(",");
+                json.append("\"session_minutes\":").append(rs.getInt("session_minutes")).append(",");
+                json.append("\"sessions_count\":").append(rs.getInt("sessions_count"));
+                json.append("}");
+            }
         }
-        rs.close();
 
         json.append("},");
 
@@ -106,7 +106,6 @@ public class CloudSync {
 
         json.append("}");
 
-        stmt.close();
         return json.toString();
     }
 

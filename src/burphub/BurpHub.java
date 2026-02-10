@@ -2,6 +2,7 @@ package burphub;
 
 import burp.*;
 import java.io.PrintWriter;
+import javax.swing.SwingUtilities;
 
 /**
  * BurpHub - Track your security testing activity like GitHub contributions
@@ -105,9 +106,9 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
             String method = requestInfo.getMethod();
             tracker.recordInterceptedRequest(method);
 
-            // Update UI
+            // Update UI on EDT
             if (uiTab != null) {
-                uiTab.refreshStats();
+                SwingUtilities.invokeLater(() -> uiTab.refreshStats());
             }
         } else {
             // Track response
@@ -161,9 +162,9 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
                     break;
             }
 
-            // Update UI periodically (not every request to save CPU)
+            // Update UI periodically on EDT (not every request to save CPU)
             if (tracker.getTotalRequestsToday() % 10 == 0 && uiTab != null) {
-                uiTab.refreshStats();
+                SwingUtilities.invokeLater(() -> uiTab.refreshStats());
             }
         }
     }
@@ -212,9 +213,9 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
         if (tracker != null) {
             tracker.recordTargetAddition();
 
-            // Update UI
+            // Update UI on EDT
             if (uiTab != null) {
-                uiTab.refreshStats();
+                SwingUtilities.invokeLater(() -> uiTab.refreshStats());
             }
         }
     }

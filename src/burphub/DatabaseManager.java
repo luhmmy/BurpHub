@@ -3,6 +3,7 @@ package burphub;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Set;
 
 /**
  * DatabaseManager - Handles SQLite database operations for BurpHub
@@ -15,6 +16,13 @@ public class DatabaseManager {
     // Use H2 database instead of SQLite
     private static final String DB_URL_PREFIX = "jdbc:h2:";
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
+
+    // Whitelist of valid column names for SQL injection prevention
+    private static final Set<String> VALID_COLUMNS = Set.of(
+            "intercepted_requests", "repeater_requests", "intruder_requests",
+            "scanner_requests", "spider_requests", "decoder_operations",
+            "comparer_operations", "sequencer_operations", "extender_events",
+            "target_additions", "logger_requests");
 
     public DatabaseManager(String dbPath) {
         this.dbPath = dbPath;
@@ -111,18 +119,6 @@ public class DatabaseManager {
                         SELECT 1, 0, 0, NULL
                         WHERE NOT EXISTS (SELECT 1 FROM streaks WHERE id = 1)
                     """);
-
-            // DEBUG: Check record counts
-            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM daily_stats")) {
-                if (rs.next()) {
-                    System.out.println("[DEBUG] daily_stats record count: " + rs.getInt(1));
-                }
-            }
-            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM streaks")) {
-                if (rs.next()) {
-                    System.out.println("[DEBUG] streaks record count: " + rs.getInt(1));
-                }
-            }
         }
     }
 
@@ -160,6 +156,11 @@ public class DatabaseManager {
      * Increment a column in daily_stats
      */
     public void incrementDailyStat(String column, int amount) throws SQLException {
+        // Validate column name against whitelist to prevent SQL injection
+        if (!VALID_COLUMNS.contains(column)) {
+            throw new IllegalArgumentException("Invalid column name: " + column);
+        }
+
         ensureTodayExists();
 
         String sql = "UPDATE daily_stats SET " + column + " = " + column + " + ? WHERE date = ?";
@@ -175,13 +176,18 @@ public class DatabaseManager {
      * Increment HTTP method count
      */
     public void incrementMethodCount(String method) throws SQLException {
-        String sql = """
-                    INSERT INTO method_counts (date, method, count)
-                    VALUES (?, ?, 1)
-                    ON CONFLICT(date, method) DO UPDATE SET count = count + 1
-                """;
-
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+        // First try to update existing row
+        String updateSql = "UPDATE method_counts SET count = count + 1 WHERE date = ? AND method = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(updateSql)) {
+            pstmt.setString(1, today());
+            pstmt.setString(2, method);
+            int updated = pstmt.executeUpdate();
+            if (updated > 0)
+                return;
+        }
+        // Row doesn't exist — insert it
+        String insertSql = "INSERT INTO method_counts (date, method, count) VALUES (?, ?, 1)";
+        try (PreparedStatement pstmt = connection.prepareStatement(insertSql)) {
             pstmt.setString(1, today());
             pstmt.setString(2, method);
             pstmt.executeUpdate();
@@ -192,13 +198,18 @@ public class DatabaseManager {
      * Increment status code count
      */
     public void incrementStatusCount(int statusCode) throws SQLException {
-        String sql = """
-                    INSERT INTO status_counts (date, status_code, count)
-                    VALUES (?, ?, 1)
-                    ON CONFLICT(date, status_code) DO UPDATE SET count = count + 1
-                """;
-
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+        // First try to update existing row
+        String updateSql = "UPDATE status_counts SET count = count + 1 WHERE date = ? AND status_code = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(updateSql)) {
+            pstmt.setString(1, today());
+            pstmt.setInt(2, statusCode);
+            int updated = pstmt.executeUpdate();
+            if (updated > 0)
+                return;
+        }
+        // Row doesn't exist — insert it
+        String insertSql = "INSERT INTO status_counts (date, status_code, count) VALUES (?, ?, 1)";
+        try (PreparedStatement pstmt = connection.prepareStatement(insertSql)) {
             pstmt.setString(1, today());
             pstmt.setInt(2, statusCode);
             pstmt.executeUpdate();

@@ -1,6 +1,8 @@
 package burphub;
 
 import java.sql.SQLException;
+import java.util.Map;
+import java.util.EnumMap;
 
 /**
  * ActivityTracker - Tracks and records Burp Suite activity events
@@ -9,21 +11,38 @@ public class ActivityTracker {
 
     private DatabaseManager database;
 
+    /**
+     * Enum for all trackable Burp Suite tools with their DB column names
+     */
+    public enum Tool {
+        PROXY("intercepted_requests"),
+        REPEATER("repeater_requests"),
+        INTRUDER("intruder_requests"),
+        SCANNER("scanner_requests"),
+        SPIDER("spider_requests"),
+        DECODER("decoder_operations"),
+        COMPARER("comparer_operations"),
+        SEQUENCER("sequencer_operations"),
+        EXTENDER("extender_events"),
+        TARGET("target_additions"),
+        LOGGER("logger_requests");
+
+        public final String column;
+
+        Tool(String column) {
+            this.column = column;
+        }
+    }
+
     // In-memory counters for current session (for quick access)
-    private int interceptedToday = 0;
-    private int repeaterToday = 0;
-    private int intruderToday = 0;
-    private int scannerToday = 0;
-    private int spiderToday = 0;
-    private int decoderToday = 0;
-    private int comparerToday = 0;
-    private int sequencerToday = 0;
-    private int extenderToday = 0;
-    private int targetToday = 0;
-    private int loggerToday = 0;
+    private final EnumMap<Tool, Integer> todayCounts = new EnumMap<>(Tool.class);
 
     public ActivityTracker(DatabaseManager database) {
         this.database = database;
+        // Initialize all counters to 0
+        for (Tool tool : Tool.values()) {
+            todayCounts.put(tool, 0);
+        }
         loadTodayStats();
     }
 
@@ -33,17 +52,29 @@ public class ActivityTracker {
     private void loadTodayStats() {
         try {
             DatabaseManager.DailyStats stats = database.getTodayStats();
-            this.interceptedToday = stats.interceptedRequests;
-            this.repeaterToday = stats.repeaterRequests;
-            this.intruderToday = stats.intruderRequests;
-            this.scannerToday = stats.scannerRequests;
-            this.spiderToday = stats.spiderRequests;
+            todayCounts.put(Tool.PROXY, stats.interceptedRequests);
+            todayCounts.put(Tool.REPEATER, stats.repeaterRequests);
+            todayCounts.put(Tool.INTRUDER, stats.intruderRequests);
+            todayCounts.put(Tool.SCANNER, stats.scannerRequests);
+            todayCounts.put(Tool.SPIDER, stats.spiderRequests);
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
     // ==================== Recording Methods ====================
+
+    /**
+     * Generic method to record activity for any tool
+     */
+    public void recordToolActivity(Tool tool) {
+        try {
+            database.incrementDailyStat(tool.column, 1);
+            todayCounts.merge(tool, 1, Integer::sum);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 
     /**
      * Record session start
@@ -69,13 +100,13 @@ public class ActivityTracker {
     }
 
     /**
-     * Record intercepted request (proxy)
+     * Record intercepted request (proxy) — also tracks HTTP method
      */
     public void recordInterceptedRequest(String method) {
         try {
-            database.incrementDailyStat("intercepted_requests", 1);
+            database.incrementDailyStat(Tool.PROXY.column, 1);
             database.incrementMethodCount(method);
-            interceptedToday++;
+            todayCounts.merge(Tool.PROXY, 1, Integer::sum);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -92,190 +123,97 @@ public class ActivityTracker {
         }
     }
 
-    /**
-     * Record Repeater request
-     */
+    // Convenience methods that delegate to recordToolActivity
     public void recordRepeaterRequest() {
-        try {
-            database.incrementDailyStat("repeater_requests", 1);
-            repeaterToday++;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        recordToolActivity(Tool.REPEATER);
     }
 
-    /**
-     * Record Intruder request
-     */
     public void recordIntruderRequest() {
-        try {
-            database.incrementDailyStat("intruder_requests", 1);
-            intruderToday++;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        recordToolActivity(Tool.INTRUDER);
     }
 
-    /**
-     * Record Scanner request
-     */
     public void recordScannerRequest() {
-        try {
-            database.incrementDailyStat("scanner_requests", 1);
-            scannerToday++;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        recordToolActivity(Tool.SCANNER);
     }
 
-    /**
-     * Record Spider request
-     */
     public void recordSpiderRequest() {
-        try {
-            database.incrementDailyStat("spider_requests", 1);
-            spiderToday++;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        recordToolActivity(Tool.SPIDER);
     }
 
-    /**
-     * Record Decoder operation
-     */
     public void recordDecoderOperation() {
-        try {
-            database.incrementDailyStat("decoder_operations", 1);
-            decoderToday++;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        recordToolActivity(Tool.DECODER);
     }
 
-    /**
-     * Record Comparer operation
-     */
     public void recordComparerOperation() {
-        try {
-            database.incrementDailyStat("comparer_operations", 1);
-            comparerToday++;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        recordToolActivity(Tool.COMPARER);
     }
 
-    /**
-     * Record Sequencer operation
-     */
     public void recordSequencerOperation() {
-        try {
-            database.incrementDailyStat("sequencer_operations", 1);
-            sequencerToday++;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        recordToolActivity(Tool.SEQUENCER);
     }
 
-    /**
-     * Record Extender event
-     */
     public void recordExtenderEvent() {
-        try {
-            database.incrementDailyStat("extender_events", 1);
-            extenderToday++;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        recordToolActivity(Tool.EXTENDER);
     }
 
-    /**
-     * Record Target addition
-     */
     public void recordTargetAddition() {
-        try {
-            database.incrementDailyStat("target_additions", 1);
-            targetToday++;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        recordToolActivity(Tool.TARGET);
     }
 
-    /**
-     * Record Logger request
-     */
     public void recordLoggerRequest() {
-        try {
-            database.incrementDailyStat("logger_requests", 1);
-            loggerToday++;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        recordToolActivity(Tool.LOGGER);
     }
 
     // ==================== Getter Methods ====================
 
+    public int getCount(Tool tool) {
+        return todayCounts.getOrDefault(tool, 0);
+    }
+
     public int getInterceptedToday() {
-        return interceptedToday;
+        return getCount(Tool.PROXY);
     }
 
     public int getRepeaterToday() {
-        return repeaterToday;
+        return getCount(Tool.REPEATER);
     }
 
     public int getIntruderToday() {
-        return intruderToday;
+        return getCount(Tool.INTRUDER);
     }
 
     public int getScannerToday() {
-        return scannerToday;
+        return getCount(Tool.SCANNER);
     }
 
     public int getSpiderToday() {
-        return spiderToday;
+        return getCount(Tool.SPIDER);
+    }
+
+    public int getDecoderToday() {
+        return getCount(Tool.DECODER);
+    }
+
+    public int getComparerToday() {
+        return getCount(Tool.COMPARER);
+    }
+
+    public int getSequencerToday() {
+        return getCount(Tool.SEQUENCER);
+    }
+
+    public int getExtenderToday() {
+        return getCount(Tool.EXTENDER);
+    }
+
+    public int getTargetToday() {
+        return getCount(Tool.TARGET);
     }
 
     public int getTotalRequestsToday() {
-        return interceptedToday + repeaterToday + intruderToday + scannerToday + spiderToday;
-    }
-
-    // ==================== NEW TOOL GETTERS ====================
-
-    /**
-     * Get Decoder operations today
-     * Note: Decoder doesn't trigger HTTP events, so this returns 0
-     */
-    public int getDecoderToday() {
-        return decoderToday;
-    }
-
-    /**
-     * Get Comparer operations today
-     * Note: Comparer doesn't trigger HTTP events, so this returns 0
-     */
-    public int getComparerToday() {
-        return comparerToday;
-    }
-
-    /**
-     * Get Sequencer operations today
-     * Note: Sequencer doesn't trigger HTTP events, so this returns 0
-     */
-    public int getSequencerToday() {
-        return sequencerToday;
-    }
-
-    /**
-     * Get Extender events today
-     */
-    public int getExtenderToday() {
-        return extenderToday;
-    }
-
-    /**
-     * Get Target scope additions today
-     */
-    public int getTargetToday() {
-        return targetToday;
+        return getCount(Tool.PROXY) + getCount(Tool.REPEATER)
+                + getCount(Tool.INTRUDER) + getCount(Tool.SCANNER)
+                + getCount(Tool.SPIDER);
     }
 
     /**
@@ -289,30 +227,29 @@ public class ActivityTracker {
      * Get the most used tool today
      */
     public String getMostUsedToolToday() {
+        Tool best = Tool.PROXY;
         int max = 0;
-        String tool = "None";
 
-        if (interceptedToday > max) {
-            max = interceptedToday;
-            tool = "Proxy";
-        }
-        if (repeaterToday > max) {
-            max = repeaterToday;
-            tool = "Repeater";
-        }
-        if (intruderToday > max) {
-            max = intruderToday;
-            tool = "Intruder";
-        }
-        if (scannerToday > max) {
-            max = scannerToday;
-            tool = "Scanner";
-        }
-        if (spiderToday > max) {
-            tool = "Spider";
+        Tool[] httpTools = { Tool.PROXY, Tool.REPEATER, Tool.INTRUDER, Tool.SCANNER, Tool.SPIDER };
+        for (Tool tool : httpTools) {
+            int count = getCount(tool);
+            if (count > max) {
+                max = count;
+                best = tool;
+            }
         }
 
-        return tool;
+        if (max == 0)
+            return "None";
+
+        return switch (best) {
+            case PROXY -> "Proxy";
+            case REPEATER -> "Repeater";
+            case INTRUDER -> "Intruder";
+            case SCANNER -> "Scanner";
+            case SPIDER -> "Spider";
+            default -> "None";
+        };
     }
 
     /**
