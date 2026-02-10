@@ -667,12 +667,25 @@ public class BurpHubTab {
     }
 
     private JPanel createSettingsPanel(IBurpExtenderCallbacks callbacks) {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(BG_DARK);
+        JPanel panel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                java.awt.GradientPaint gp = new java.awt.GradientPaint(
+                        0, 0, new Color(30, 30, 30),
+                        getWidth(), getHeight(), new Color(42, 21, 21));
+                g2d.setPaint(gp);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+        panel.setOpaque(false);
         panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
 
         JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBackground(BG_CARD);
+        formPanel.setOpaque(true);
+        formPanel.setBackground(new Color(45, 45, 45, 200)); // Slightly transparent card background
         formPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(60, 60, 60), 1),
                 BorderFactory.createEmptyBorder(25, 25, 25, 25)));
