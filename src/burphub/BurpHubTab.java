@@ -20,6 +20,7 @@ public class BurpHubTab {
 
     private JPanel mainPanel;
     private HeatmapPanel heatmapPanel;
+    private SignalChartPanel signalChartPanel;
     private JLabel streakLabel;
     private JLabel longestStreakLabel;
     private JLabel todayRequestsLabel;
@@ -199,6 +200,10 @@ public class BurpHubTab {
 
         heatmapPanel = new HeatmapPanel();
         panel.add(heatmapPanel, BorderLayout.CENTER);
+
+        // Signal chart (30-day sparkline) beside the heatmap
+        signalChartPanel = new SignalChartPanel();
+        panel.add(signalChartPanel, BorderLayout.EAST);
 
         // Legend
         JPanel legendPanel = createHeatmapLegend();
@@ -413,6 +418,7 @@ public class BurpHubTab {
                 // Update heatmap
                 Map<String, Integer> heatmapData = database.getActivityHeatmap(365);
                 heatmapPanel.setData(heatmapData);
+                signalChartPanel.setData(heatmapData);
 
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -526,6 +532,122 @@ public class BurpHubTab {
                     row = 0;
                     col++;
                 }
+            }
+        }
+    }
+
+    /**
+     * Inner class for the signal/sparkline chart showing last 30 days
+     */
+    private class SignalChartPanel extends JPanel {
+        private int[] values = new int[30];
+        private int maxVal = 1;
+
+        public SignalChartPanel() {
+            setBackground(BG_CARD);
+            setPreferredSize(new Dimension(250, 0));
+            setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+        }
+
+        public void setData(Map<String, Integer> data) {
+            LocalDate today = LocalDate.now();
+            maxVal = 1;
+            for (int i = 0; i < 30; i++) {
+                String dateStr = today.minusDays(29 - i).format(DateTimeFormatter.ISO_LOCAL_DATE);
+                values[i] = data.getOrDefault(dateStr, 0);
+                maxVal = Math.max(maxVal, values[i]);
+            }
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2d = (Graphics2D) g;
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+            int padTop = 30, padBot = 25, padLeft = 5, padRight = 5;
+            int chartW = w - padLeft - padRight;
+            int chartH = h - padTop - padBot;
+
+            // Title
+            g2d.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            g2d.setColor(TEXT_PRIMARY);
+            g2d.drawString("Last 30 Days", padLeft, 18);
+
+            // Grid lines
+            g2d.setColor(new Color(50, 50, 50));
+            g2d.setStroke(
+                    new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, new float[] { 4f }, 0f));
+            for (int i = 0; i <= 4; i++) {
+                int y = padTop + (int) (chartH * (i / 4.0));
+                g2d.drawLine(padLeft, y, w - padRight, y);
+            }
+
+            if (maxVal == 0) {
+                g2d.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+                g2d.setColor(TEXT_SECONDARY);
+                g2d.drawString("No data yet", w / 2 - 30, h / 2);
+                return;
+            }
+
+            // Build points
+            int[] xPoints = new int[30];
+            int[] yPoints = new int[30];
+            float stepX = (float) chartW / 29;
+
+            for (int i = 0; i < 30; i++) {
+                xPoints[i] = padLeft + (int) (i * stepX);
+                yPoints[i] = padTop + chartH - (int) ((double) values[i] / maxVal * chartH);
+            }
+
+            // Filled gradient area under the line
+            int[] fillX = new int[32];
+            int[] fillY = new int[32];
+            System.arraycopy(xPoints, 0, fillX, 0, 30);
+            System.arraycopy(yPoints, 0, fillY, 0, 30);
+            fillX[30] = xPoints[29];
+            fillY[30] = padTop + chartH;
+            fillX[31] = xPoints[0];
+            fillY[31] = padTop + chartH;
+
+            g2d.setPaint(new java.awt.GradientPaint(
+                    0, padTop, new Color(220, 50, 50, 80),
+                    0, padTop + chartH, new Color(220, 50, 50, 10)));
+            g2d.fillPolygon(fillX, fillY, 32);
+
+            // Signal line
+            g2d.setStroke(new BasicStroke(2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2d.setPaint(new java.awt.GradientPaint(
+                    0, 0, new Color(255, 70, 70),
+                    w, 0, new Color(200, 30, 60)));
+            for (int i = 0; i < 29; i++) {
+                g2d.drawLine(xPoints[i], yPoints[i], xPoints[i + 1], yPoints[i + 1]);
+            }
+
+            // Dots at data points
+            for (int i = 0; i < 30; i++) {
+                if (values[i] > 0) {
+                    g2d.setColor(new Color(255, 80, 80));
+                    g2d.fillOval(xPoints[i] - 3, yPoints[i] - 3, 6, 6);
+                    // Glow effect on last point
+                    if (i == 29) {
+                        g2d.setColor(new Color(255, 60, 60, 60));
+                        g2d.fillOval(xPoints[i] - 7, yPoints[i] - 7, 14, 14);
+                    }
+                }
+            }
+
+            // X-axis labels (every 7 days)
+            g2d.setFont(new Font("Segoe UI", Font.PLAIN, 9));
+            g2d.setColor(TEXT_SECONDARY);
+            g2d.setStroke(new BasicStroke(1f));
+            LocalDate today = LocalDate.now();
+            for (int i = 0; i < 30; i += 7) {
+                String label = today.minusDays(29 - i).format(java.time.format.DateTimeFormatter.ofPattern("MM/dd"));
+                g2d.drawString(label, xPoints[i] - 12, padTop + chartH + 15);
             }
         }
     }
