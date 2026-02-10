@@ -463,4 +463,272 @@ public class DatabaseManager {
             return totalIntercepted + totalRepeater + totalIntruder + totalScanner;
         }
     }
+
+    // ==================== Wrap Data Classes ====================
+
+    public static class MonthlyWrap {
+        public final int year, month;
+        public final int totalRequests;
+        public final String topTool;
+        public final int topToolCount;
+        public final String mostActiveDay;
+        public final int mostActiveDayCount;
+        public final int totalMinutes;
+        public final int activeDays;
+        public final int daysInMonth;
+        public final int prevMonthRequests;
+
+        public MonthlyWrap(int year, int month, int totalRequests,
+                String topTool, int topToolCount,
+                String mostActiveDay, int mostActiveDayCount,
+                int totalMinutes, int activeDays, int daysInMonth,
+                int prevMonthRequests) {
+            this.year = year;
+            this.month = month;
+            this.totalRequests = totalRequests;
+            this.topTool = topTool;
+            this.topToolCount = topToolCount;
+            this.mostActiveDay = mostActiveDay;
+            this.mostActiveDayCount = mostActiveDayCount;
+            this.totalMinutes = totalMinutes;
+            this.activeDays = activeDays;
+            this.daysInMonth = daysInMonth;
+            this.prevMonthRequests = prevMonthRequests;
+        }
+
+        public int getChangePercent() {
+            if (prevMonthRequests == 0)
+                return totalRequests > 0 ? 100 : 0;
+            return (int) (((double) (totalRequests - prevMonthRequests) / prevMonthRequests) * 100);
+        }
+    }
+
+    public static class YearlyWrap {
+        public final int year;
+        public final int totalRequests;
+        public final String topTool;
+        public final int topToolCount;
+        public final String mostActiveDay;
+        public final int mostActiveDayCount;
+        public final String mostActiveMonth;
+        public final int mostActiveMonthCount;
+        public final int totalMinutes;
+        public final int activeDays;
+        public final int longestStreak;
+        public final int[] monthlyTotals;
+
+        public YearlyWrap(int year, int totalRequests,
+                String topTool, int topToolCount,
+                String mostActiveDay, int mostActiveDayCount,
+                String mostActiveMonth, int mostActiveMonthCount,
+                int totalMinutes, int activeDays, int longestStreak,
+                int[] monthlyTotals) {
+            this.year = year;
+            this.totalRequests = totalRequests;
+            this.topTool = topTool;
+            this.topToolCount = topToolCount;
+            this.mostActiveDay = mostActiveDay;
+            this.mostActiveDayCount = mostActiveDayCount;
+            this.mostActiveMonth = mostActiveMonth;
+            this.mostActiveMonthCount = mostActiveMonthCount;
+            this.totalMinutes = totalMinutes;
+            this.activeDays = activeDays;
+            this.longestStreak = longestStreak;
+            this.monthlyTotals = monthlyTotals;
+        }
+    }
+
+    // ==================== Wrap Queries ====================
+
+    public MonthlyWrap getMonthlyWrap(int year, int month) throws SQLException {
+        String monthPrefix = String.format("%04d-%02d", year, month);
+        LocalDate monthStart = LocalDate.of(year, month, 1);
+        int daysInMonth = monthStart.lengthOfMonth();
+
+        String sql = """
+                    SELECT
+                        COALESCE(SUM(intercepted_requests + repeater_requests + intruder_requests + scanner_requests + spider_requests), 0) as total,
+                        COALESCE(SUM(intercepted_requests), 0) as proxy,
+                        COALESCE(SUM(repeater_requests), 0) as repeater,
+                        COALESCE(SUM(intruder_requests), 0) as intruder,
+                        COALESCE(SUM(scanner_requests), 0) as scanner,
+                        COALESCE(SUM(spider_requests), 0) as spider,
+                        COALESCE(SUM(session_minutes), 0) as minutes,
+                        COUNT(*) as active_days
+                    FROM daily_stats
+                    WHERE date LIKE ?
+                    AND (intercepted_requests + repeater_requests + intruder_requests + scanner_requests + spider_requests) > 0
+                """;
+
+        int totalRequests = 0, proxy = 0, repeater = 0, intruder = 0, scanner = 0, spider = 0;
+        int totalMinutes = 0, activeDays = 0;
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, monthPrefix + "%");
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                totalRequests = rs.getInt("total");
+                proxy = rs.getInt("proxy");
+                repeater = rs.getInt("repeater");
+                intruder = rs.getInt("intruder");
+                scanner = rs.getInt("scanner");
+                spider = rs.getInt("spider");
+                totalMinutes = rs.getInt("minutes");
+                activeDays = rs.getInt("active_days");
+            }
+        }
+
+        // Find top tool
+        String topTool = "None";
+        int topToolCount = 0;
+        int[][] tools = { { proxy, 0 }, { repeater, 1 }, { intruder, 2 }, { scanner, 3 }, { spider, 4 } };
+        String[] toolNames = { "Proxy", "Repeater", "Intruder", "Scanner", "Spider" };
+        for (int[] tool : tools) {
+            if (tool[0] > topToolCount) {
+                topToolCount = tool[0];
+                topTool = toolNames[tool[1]];
+            }
+        }
+
+        // Find most active day
+        String mostActiveDay = "None";
+        int mostActiveDayCount = 0;
+        String daySql = """
+                    SELECT date,
+                        (intercepted_requests + repeater_requests + intruder_requests + scanner_requests + spider_requests) as total
+                    FROM daily_stats WHERE date LIKE ?
+                    ORDER BY total DESC LIMIT 1
+                """;
+        try (PreparedStatement pstmt = connection.prepareStatement(daySql)) {
+            pstmt.setString(1, monthPrefix + "%");
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                mostActiveDay = rs.getString("date");
+                mostActiveDayCount = rs.getInt("total");
+            }
+        }
+
+        // Previous month comparison
+        LocalDate prevMonth = monthStart.minusMonths(1);
+        String prevPrefix = String.format("%04d-%02d", prevMonth.getYear(), prevMonth.getMonthValue());
+        int prevMonthRequests = 0;
+        String prevSql = """
+                    SELECT COALESCE(SUM(intercepted_requests + repeater_requests + intruder_requests + scanner_requests + spider_requests), 0) as total
+                    FROM daily_stats WHERE date LIKE ?
+                """;
+        try (PreparedStatement pstmt = connection.prepareStatement(prevSql)) {
+            pstmt.setString(1, prevPrefix + "%");
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                prevMonthRequests = rs.getInt("total");
+            }
+        }
+
+        return new MonthlyWrap(year, month, totalRequests, topTool, topToolCount,
+                mostActiveDay, mostActiveDayCount, totalMinutes, activeDays, daysInMonth,
+                prevMonthRequests);
+    }
+
+    public YearlyWrap getYearlyWrap(int year) throws SQLException {
+        String yearPrefix = String.format("%04d", year);
+
+        String sql = """
+                    SELECT
+                        COALESCE(SUM(intercepted_requests + repeater_requests + intruder_requests + scanner_requests + spider_requests), 0) as total,
+                        COALESCE(SUM(intercepted_requests), 0) as proxy,
+                        COALESCE(SUM(repeater_requests), 0) as repeater,
+                        COALESCE(SUM(intruder_requests), 0) as intruder,
+                        COALESCE(SUM(scanner_requests), 0) as scanner,
+                        COALESCE(SUM(spider_requests), 0) as spider,
+                        COALESCE(SUM(session_minutes), 0) as minutes,
+                        COUNT(*) as active_days
+                    FROM daily_stats WHERE date LIKE ?
+                    AND (intercepted_requests + repeater_requests + intruder_requests + scanner_requests + spider_requests) > 0
+                """;
+
+        int totalRequests = 0, proxy = 0, repeater = 0, intruder = 0, scanner = 0, spider = 0;
+        int totalMinutes = 0, activeDays = 0;
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, yearPrefix + "%");
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                totalRequests = rs.getInt("total");
+                proxy = rs.getInt("proxy");
+                repeater = rs.getInt("repeater");
+                intruder = rs.getInt("intruder");
+                scanner = rs.getInt("scanner");
+                spider = rs.getInt("spider");
+                totalMinutes = rs.getInt("minutes");
+                activeDays = rs.getInt("active_days");
+            }
+        }
+
+        // Find top tool
+        String topTool = "None";
+        int topToolCount = 0;
+        int[][] tools = { { proxy, 0 }, { repeater, 1 }, { intruder, 2 }, { scanner, 3 }, { spider, 4 } };
+        String[] toolNames = { "Proxy", "Repeater", "Intruder", "Scanner", "Spider" };
+        for (int[] tool : tools) {
+            if (tool[0] > topToolCount) {
+                topToolCount = tool[0];
+                topTool = toolNames[tool[1]];
+            }
+        }
+
+        // Most active day of the year
+        String mostActiveDay = "None";
+        int mostActiveDayCount = 0;
+        String daySql = """
+                    SELECT date,
+                        (intercepted_requests + repeater_requests + intruder_requests + scanner_requests + spider_requests) as total
+                    FROM daily_stats WHERE date LIKE ?
+                    ORDER BY total DESC LIMIT 1
+                """;
+        try (PreparedStatement pstmt = connection.prepareStatement(daySql)) {
+            pstmt.setString(1, yearPrefix + "%");
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                mostActiveDay = rs.getString("date");
+                mostActiveDayCount = rs.getInt("total");
+            }
+        }
+
+        // Monthly totals for bar chart
+        int[] monthlyTotals = new int[12];
+        String mostActiveMonth = "None";
+        int mostActiveMonthCount = 0;
+        String[] monthNames = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+        for (int m = 1; m <= 12; m++) {
+            String mPrefix = String.format("%04d-%02d", year, m);
+            String mSql = """
+                        SELECT COALESCE(SUM(intercepted_requests + repeater_requests + intruder_requests + scanner_requests + spider_requests), 0) as total
+                        FROM daily_stats WHERE date LIKE ?
+                    """;
+            try (PreparedStatement pstmt = connection.prepareStatement(mSql)) {
+                pstmt.setString(1, mPrefix + "%");
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    monthlyTotals[m - 1] = rs.getInt("total");
+                    if (monthlyTotals[m - 1] > mostActiveMonthCount) {
+                        mostActiveMonthCount = monthlyTotals[m - 1];
+                        mostActiveMonth = monthNames[m - 1];
+                    }
+                }
+            }
+        }
+
+        int longestStreak = 0;
+        try {
+            StreakInfo info = getStreakInfo();
+            longestStreak = info.longestStreak;
+        } catch (Exception e) {
+            /* ignore */ }
+
+        return new YearlyWrap(year, totalRequests, topTool, topToolCount,
+                mostActiveDay, mostActiveDayCount, mostActiveMonth, mostActiveMonthCount,
+                totalMinutes, activeDays, longestStreak, monthlyTotals);
+    }
 }

@@ -48,15 +48,15 @@ public class BurpHubTab {
     private static final Color TEXT_PRIMARY = new Color(230, 230, 230);
     private static final Color TEXT_SECONDARY = new Color(160, 160, 160);
     private static final Color ACCENT_ORANGE = new Color(255, 140, 0);
-    private static final Color ACCENT_GREEN = new Color(34, 197, 94);
+    private static final Color ACCENT_RED = new Color(220, 50, 50);
 
-    // Heatmap colors (GitHub-style green)
+    // Heatmap colors (Red team themed)
     private static final Color[] HEATMAP_COLORS = {
             new Color(22, 27, 34), // Level 0 - no activity
-            new Color(14, 68, 41), // Level 1
-            new Color(0, 109, 50), // Level 2
-            new Color(38, 166, 65), // Level 3
-            new Color(57, 211, 83) // Level 4 - high activity
+            new Color(75, 20, 20), // Level 1 - low
+            new Color(140, 30, 30), // Level 2 - medium
+            new Color(200, 45, 45), // Level 3 - high
+            new Color(255, 60, 60) // Level 4 - very high activity
     };
 
     public BurpHubTab(IBurpExtenderCallbacks callbacks, DatabaseManager database, ActivityTracker tracker) {
@@ -69,13 +69,23 @@ public class BurpHubTab {
     }
 
     private void buildUI() {
-        mainPanel = new JPanel(new BorderLayout(0, 20));
+        mainPanel = new JPanel(new BorderLayout(0, 0));
         mainPanel.setBackground(BG_DARK);
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Create tabbed pane
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setBackground(BG_DARK);
+        tabbedPane.setForeground(TEXT_PRIMARY);
+        tabbedPane.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 13));
+
+        // --- Tab 1: Dashboard (existing layout) ---
+        JPanel dashboardPanel = new JPanel(new BorderLayout(0, 20));
+        dashboardPanel.setBackground(BG_DARK);
+        dashboardPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         // Header
         JPanel headerPanel = createHeaderPanel();
-        mainPanel.add(headerPanel, BorderLayout.NORTH);
+        dashboardPanel.add(headerPanel, BorderLayout.NORTH);
 
         // Center content
         JPanel centerPanel = new JPanel(new BorderLayout(0, 20));
@@ -89,7 +99,15 @@ public class BurpHubTab {
         JPanel statsPanel = createStatsPanel();
         centerPanel.add(statsPanel, BorderLayout.CENTER);
 
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
+        dashboardPanel.add(centerPanel, BorderLayout.CENTER);
+
+        tabbedPane.addTab("\uD83D\uDCCA Dashboard", dashboardPanel);
+
+        // --- Tab 2: Wrapped ---
+        WrapPanel wrapPanel = new WrapPanel(database);
+        tabbedPane.addTab("\uD83C\uDFB5 Wrapped", wrapPanel);
+
+        mainPanel.add(tabbedPane, BorderLayout.CENTER);
 
         // Initial data load
         refreshStats();
@@ -316,7 +334,7 @@ public class BurpHubTab {
     private JLabel createStatValue(String text) {
         JLabel label = new JLabel(text);
         label.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        label.setForeground(ACCENT_GREEN);
+        label.setForeground(ACCENT_RED);
         label.setHorizontalAlignment(SwingConstants.RIGHT);
         return label;
     }
