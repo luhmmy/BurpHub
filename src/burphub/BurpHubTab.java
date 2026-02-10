@@ -2,7 +2,6 @@ package burphub;
 
 import burp.IBurpExtenderCallbacks;
 import javax.swing.*;
-import javax.swing.border.*;
 import java.awt.*;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -121,7 +120,7 @@ public class BurpHubTab {
         tabbedPane.addTab("\uD83C\uDFB5 Wrapped", wrapPanel);
 
         // --- Tab 3: Settings ---
-        JPanel settingsPanel = createSettingsPanel();
+        JPanel settingsPanel = createSettingsPanel(callbacks);
         tabbedPane.addTab("\u2699 Settings", settingsPanel);
 
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
@@ -667,7 +666,7 @@ public class BurpHubTab {
         }
     }
 
-    private JPanel createSettingsPanel() {
+    private JPanel createSettingsPanel(IBurpExtenderCallbacks callbacks) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(BG_DARK);
         panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
@@ -685,7 +684,7 @@ public class BurpHubTab {
         gbc.gridy = 0;
 
         JLabel title = new JLabel("Profile Settings");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
         title.setForeground(TEXT_PRIMARY);
         gbc.gridwidth = 2;
         formPanel.add(title, gbc);
@@ -694,15 +693,15 @@ public class BurpHubTab {
         gbc.gridy++;
         addSettingField(formPanel, gbc, "Display Handle:", "profile_handle", "e.g. @bugbounty_hunter");
         gbc.gridy++;
-        addSettingField(formPanel, gbc, "Profile Bio:", "profile_bio",
-                "e.g. Pwnard of systems | Web Security Researcher");
+        addSettingField(formPanel, gbc, "Profile Bio:", "profile_bio", "e.g. Security Researcher");
         gbc.gridy++;
         addSettingField(formPanel, gbc, "GitHub URL:", "profile_github", "e.g. https://github.com/username");
 
         gbc.gridy++;
         gbc.gridwidth = 2;
-        gbc.insets = new Insets(30, 10, 10, 10);
-        JButton saveButton = new JButton("Save Profile");
+        gbc.insets = new Insets(30, 10, 5, 10);
+
+        JButton saveButton = new JButton("Save Profile & Sync");
         saveButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         saveButton.setBackground(new Color(220, 38, 38));
         saveButton.setForeground(Color.WHITE);
@@ -721,14 +720,53 @@ public class BurpHubTab {
                         }
                     }
                 }
-                JOptionPane.showMessageDialog(panel, "Profile saved successfully!", "Success",
-                        JOptionPane.INFORMATION_MESSAGE);
+
+                // Trigger immediate sync
+                String apiUrl = System.getProperty("burphub.api.url");
+                String apiKey = System.getProperty("burphub.api.key");
+                boolean synced = false;
+                if (apiUrl != null && apiKey != null) {
+                    synced = CloudSync.syncData(apiUrl, apiKey, database);
+                }
+
+                String msg = synced ? "Profile saved and synced to cloud!"
+                        : "Profile saved locally (Sync failed or not configured).";
+                JOptionPane.showMessageDialog(panel, msg, "Success", JOptionPane.INFORMATION_MESSAGE);
             } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(panel, "Error saving profile: " + ex.getMessage(), "Error",
-                        JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(panel, "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
         formPanel.add(saveButton, gbc);
+
+        // Add manual sync button below
+        gbc.gridy++;
+        gbc.insets = new Insets(5, 10, 10, 10);
+        JButton syncButton = new JButton("\uD83D\uDCE4 Manual Cloud Sync");
+        syncButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        syncButton.setBackground(new Color(45, 45, 45));
+        syncButton.setForeground(TEXT_PRIMARY);
+        syncButton.setFocusPainted(false);
+        syncButton.setBorder(BorderFactory.createLineBorder(new Color(100, 100, 100)));
+        syncButton.setPreferredSize(new Dimension(200, 30));
+
+        syncButton.addActionListener(e -> {
+            String apiUrl = System.getProperty("burphub.api.url");
+            String apiKey = System.getProperty("burphub.api.key");
+            if (apiUrl != null && apiKey != null) {
+                boolean synced = CloudSync.syncData(apiUrl, apiKey, database);
+                if (synced) {
+                    JOptionPane.showMessageDialog(panel, "Data synced successfully!", "Success",
+                            JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(panel, "Sync failed. Check cloud-sync.properties", "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(panel, "Cloud sync not configured.", "Warning",
+                        JOptionPane.WARNING_MESSAGE);
+            }
+        });
+        formPanel.add(syncButton, gbc);
 
         JPanel wrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
         wrapper.setOpaque(false);

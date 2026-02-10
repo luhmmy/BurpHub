@@ -111,6 +111,18 @@ public class DatabaseManager {
                         SELECT 1, 0, 0, NULL
                         WHERE NOT EXISTS (SELECT 1 FROM streaks WHERE id = 1)
                     """);
+
+            // DEBUG: Check record counts
+            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM daily_stats")) {
+                if (rs.next()) {
+                    System.out.println("[DEBUG] daily_stats record count: " + rs.getInt(1));
+                }
+            }
+            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM streaks")) {
+                if (rs.next()) {
+                    System.out.println("[DEBUG] streaks record count: " + rs.getInt(1));
+                }
+            }
         }
     }
 

@@ -39,7 +39,9 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
 
         try {
             // Initialize database
-            database = new DatabaseManager(getDataPath());
+            String path = getDataPath();
+            stdout.println("[*] Using database path: " + path);
+            database = new DatabaseManager(path);
             database.initialize();
             stdout.println("[+] Database initialized");
 
