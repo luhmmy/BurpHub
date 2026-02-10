@@ -97,11 +97,12 @@ public class DatabaseManager {
                 stmt.execute(sql);
             }
 
-            // Initialize streaks row if not exists (H2 syntax)
+            // Initialize streaks row ONLY if it doesn't already exist
+            // (Using INSERT with NOT EXISTS to avoid overwriting existing streak data)
             stmt.execute("""
-                        MERGE INTO streaks (id, current_streak, longest_streak, last_active_date)
-                        KEY (id)
-                        VALUES (1, 0, 0, NULL)
+                        INSERT INTO streaks (id, current_streak, longest_streak, last_active_date)
+                        SELECT 1, 0, 0, NULL
+                        WHERE NOT EXISTS (SELECT 1 FROM streaks WHERE id = 1)
                     """);
         }
     }
