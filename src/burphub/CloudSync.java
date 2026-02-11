@@ -1,5 +1,7 @@
 package burphub;
 
+import burp.IBurpExtenderCallbacks;
+import java.io.PrintWriter;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -14,8 +16,17 @@ public class CloudSync {
     /**
      * Sync all data to cloud API
      */
-    public static boolean syncData(String apiUrl, String apiKey, DatabaseManager database) {
+    public static boolean syncData(String apiUrl, String apiKey, DatabaseManager database,
+            IBurpExtenderCallbacks callbacks) {
         try {
+            // OWASP A02: Ensure secure transport
+            if (apiUrl != null && !apiUrl.toLowerCase().startsWith("https://")) {
+                if (callbacks != null) {
+                    new PrintWriter(callbacks.getStderr(), true)
+                            .println("[!] WARNING: Using insecure HTTP for cloud sync. HTTPS is highly recommended.");
+                }
+            }
+
             // Build JSON payload
             String jsonPayload = buildSyncPayload(database);
 
@@ -40,8 +51,9 @@ public class CloudSync {
             return responseCode == 200;
 
         } catch (Exception e) {
-            System.err.println("Cloud sync failed: " + e.getMessage());
-            e.printStackTrace();
+            if (callbacks != null) {
+                new PrintWriter(callbacks.getStderr(), true).println("Cloud sync failed: " + e.getMessage());
+            }
             return false;
         }
     }

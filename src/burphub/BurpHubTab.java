@@ -739,7 +739,7 @@ public class BurpHubTab {
                 String apiKey = System.getProperty("burphub.api.key");
                 boolean synced = false;
                 if (apiUrl != null && apiKey != null) {
-                    synced = CloudSync.syncData(apiUrl, apiKey, database);
+                    synced = CloudSync.syncData(apiUrl, apiKey, database, callbacks);
                 }
 
                 String msg = synced ? "Profile saved and synced to cloud!"
@@ -766,7 +766,7 @@ public class BurpHubTab {
             String apiUrl = System.getProperty("burphub.api.url");
             String apiKey = System.getProperty("burphub.api.key");
             if (apiUrl != null && apiKey != null) {
-                boolean synced = CloudSync.syncData(apiUrl, apiKey, database);
+                boolean synced = CloudSync.syncData(apiUrl, apiKey, database, callbacks);
                 if (synced) {
                     JOptionPane.showMessageDialog(panel, "Data synced successfully!", "Success",
                             JOptionPane.INFORMATION_MESSAGE);

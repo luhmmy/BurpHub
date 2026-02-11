@@ -189,7 +189,7 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
             String apiKey = System.getProperty("burphub.api.key");
 
             if (apiUrl != null && apiKey != null) {
-                boolean synced = CloudSync.syncData(apiUrl, apiKey, database);
+                boolean synced = CloudSync.syncData(apiUrl, apiKey, database, callbacks);
                 if (synced) {
                     stdout.println("[+] Cloud sync successful!");
                 } else {
