@@ -10,6 +10,7 @@ Track your security testing activity like GitHub contributions! BurpHub monitors
 - **🔥 Streak Tracking** - Current and longest streak counters
 - **📈 Real-time Metrics** - Track 8 Burp Suite tools in real-time
 - **💾 Local Database** - H2 database stores all data locally and privately
+- **🔒 Security Hardened** - OWASP Top 10 audited (SQLi/XSS protected)
 - **☁️ Cloud Sync** (Optional) - Sync to web dashboard for remote viewing
 - **🎨 Dark Theme** - Matches Burp Suite's professional UI
 
