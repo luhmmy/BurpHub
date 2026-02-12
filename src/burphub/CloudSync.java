@@ -93,6 +93,25 @@ public class CloudSync {
                 json.append("\"logger_requests\":").append(rs.getInt("logger_requests")).append(",");
                 json.append("\"session_minutes\":").append(rs.getInt("session_minutes")).append(",");
                 json.append("\"sessions_count\":").append(rs.getInt("sessions_count"));
+
+                // Add extension stats for this specific date
+                json.append(",\"extensions\":{");
+                try (PreparedStatement pseudoStmt = conn
+                        .prepareStatement("SELECT name, activity_count FROM extensions WHERE last_seen = ?")) {
+                    pseudoStmt.setString(1, date);
+                    try (ResultSet rsExt = pseudoStmt.executeQuery()) {
+                        boolean firstExt = true;
+                        while (rsExt.next()) {
+                            if (!firstExt)
+                                json.append(",");
+                            firstExt = false;
+                            json.append("\"").append(escapeJson(rsExt.getString("name"))).append("\":")
+                                    .append(rsExt.getInt("activity_count"));
+                        }
+                    }
+                }
+                json.append("}");
+
                 json.append("}");
             }
         }
