@@ -2,7 +2,7 @@
 
 Track your security testing activity like GitHub contributions! BurpHub monitors your Burp Suite usage and displays beautiful statistics with activity heatmaps, streak tracking, and tool-specific metrics.
 
-![BurpHub Dashboard](https://via.placeholder.com/800x400?text=BurpHub+Dashboard)
+![BurpHub Dashboard](assets/burphub_dashboard.jpeg)
 
 ## ✨ Features
 
@@ -51,35 +51,31 @@ Track your security testing activity like GitHub contributions! BurpHub monitors
 
 ## 🚀 Quick Start
 
-1. **Install extension** (see above)
-2. **Use Burp Suite normally** - BurpHub tracks automatically
-3. **View stats** - Click the **BurpHub** tab
-4. **Track streak** - Use Burp daily to build your streak!
+1.  **Install extension** (see above)
+2.  **Use Burp Suite normally** - BurpHub tracks automatically
+3.  **View stats** - Click the **BurpHub** tab
+4.  **Track streak** - Use Burp daily to build your streak!
 
 ## 🛠️ Requirements
 
-- **Burp Suite** - Community or Professional Edition
-- **Java** - Version 11 or higher
-- **OS** - Windows, macOS, or Linux
+-   **Burp Suite** - Community or Professional Edition
+-   **Java** - Version 11 or higher
+-   **OS** - Windows, macOS, or Linux
 
 ## 📸 Screenshots
 
 ### Activity Dashboard
-![Dashboard](https://via.placeholder.com/600x400?text=Activity+Dashboard)
+![Dashboard](assets/burphub_dashboard.jpeg)
 
 ### Streak Tracking
-![Streaks](https://via.placeholder.com/600x400?text=Streak+Tracking)
+![Streaks](assets/burphub_streaks.jpeg)
 
 ## ☁️ Cloud Sync (Optional)
 
 Sync your data to a web dashboard for remote viewing:
 
-1. Deploy the cloud dashboard (see `dashboard/DEPLOY_GUIDE.md`)
-2. Set Java properties when launching Burp:
-   ```bash
-   java -Dburphub.api.url=https://your-dashboard.com/sync \
-        -Dburphub.api.key=your-secret-key \
-        -jar burpsuite.jar
+![Cloud Dashboard](assets/burphub_web.jpeg)
+
    ```
 
 ## 🗄️ Data Storage
