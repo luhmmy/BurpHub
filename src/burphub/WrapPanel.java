@@ -124,7 +124,7 @@ public class WrapPanel extends JPanel {
             isDailyMode = true;
             isYearlyMode = false;
             currentSlide = 0;
-            totalSlides = 5;
+            totalSlides = 6;
             updateToggleState();
             loadData();
         });
@@ -133,7 +133,7 @@ public class WrapPanel extends JPanel {
             isDailyMode = false;
             isYearlyMode = false;
             currentSlide = 0;
-            totalSlides = 6;
+            totalSlides = 7;
             updateToggleState();
             loadData();
         });
@@ -142,7 +142,7 @@ public class WrapPanel extends JPanel {
             isDailyMode = false;
             isYearlyMode = true;
             currentSlide = 0;
-            totalSlides = 8;
+            totalSlides = 9;
             updateToggleState();
             loadData();
         });
@@ -370,13 +370,13 @@ public class WrapPanel extends JPanel {
             if (isDailyMode) {
                 dailyData = database
                         .getDailyWrap(LocalDate.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE));
-                totalSlides = 5;
+                totalSlides = 6;
             } else if (!isYearlyMode) {
                 monthlyData = database.getMonthlyWrap(currentYear, currentMonth);
-                totalSlides = 6;
+                totalSlides = 7;
             } else {
                 yearlyData = database.getYearlyWrap(currentYear);
-                totalSlides = 8;
+                totalSlides = 9;
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -435,6 +435,16 @@ public class WrapPanel extends JPanel {
                     String.valueOf(dailyData.sessionsCount),
                     "distinct sessions today",
                     4), "slide4");
+
+            slideContainer.add(createSummarySlide(
+                    "📊 Today's Recap",
+                    new String[] {
+                            dailyData.totalRequests + " Total Requests",
+                            dailyData.topTool + " (#1 Tool)",
+                            formatTime(dailyData.sessionMinutes) + " Session Time",
+                            dailyData.status2xx + " Successes (2xx)",
+                            dailyData.sessionsCount + " Sessions"
+                    }, 5), "slide5");
 
         } else if (!isYearlyMode && monthlyData != null) {
             String monthName = Month.of(currentMonth).getDisplayName(TextStyle.FULL, Locale.ENGLISH);
@@ -522,6 +532,16 @@ public class WrapPanel extends JPanel {
                     6), "slide6");
 
             slideContainer.add(createBarChartSlide(), "slide7");
+
+            slideContainer.add(createSummarySlide(
+                    "✨ " + currentYear + " in Review",
+                    new String[] {
+                            formatNumber(yearlyData.totalRequests) + " Total Requests",
+                            yearlyData.topTool + " (#1 Tool)",
+                            formatTime(yearlyData.totalMinutes) + " Total Time",
+                            yearlyData.activeDays + " Active Days",
+                            yearlyData.longestStreak + " Day Streak"
+                    }, 8), "slide8");
         }
 
         slideContainer.revalidate();
@@ -729,5 +749,56 @@ public class WrapPanel extends JPanel {
             return days + "d " + hours + "h";
         }
         return hours + "h " + mins + "m";
+    }
+
+    /**
+     * Creates a summary slide with multiple key metrics
+     */
+    private JPanel createSummarySlide(String title, String[] metrics, int slideIndex) {
+        JPanel slide = new JPanel(new BorderLayout(0, 15)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Gradient background (last one)
+                GradientPaint gp = new GradientPaint(0, 0, new Color(40, 40, 40),
+                        getWidth(), getHeight(), new Color(20, 20, 20));
+                g2d.setPaint(gp);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+
+                // Apply fade
+                Composite original = g2d.getComposite();
+                g2d.setComposite(
+                        AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.max(0f, Math.min(1f, fadeAlpha))));
+
+                g2d.setFont(new Font("Segoe UI", Font.BOLD, 28));
+                g2d.setColor(Color.WHITE);
+                FontMetrics fm = g2d.getFontMetrics();
+                g2d.drawString(title, (getWidth() - fm.stringWidth(title)) / 2, 60);
+
+                g2d.setComposite(original);
+            }
+        };
+
+        JPanel metricsPanel = new JPanel();
+        metricsPanel.setLayout(new BoxLayout(metricsPanel, BoxLayout.Y_AXIS));
+        metricsPanel.setOpaque(false);
+        metricsPanel.setBorder(BorderFactory.createEmptyBorder(80, 40, 40, 40));
+
+        for (String metric : metrics) {
+            JLabel label = new JLabel("• " + metric);
+            label.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+            label.setForeground(TEXT_PRIMARY);
+            label.setAlignmentX(Component.CENTER_ALIGNMENT);
+            metricsPanel.add(label);
+            metricsPanel.add(Box.createVerticalStrut(10));
+        }
+
+        slide.add(metricsPanel, BorderLayout.CENTER);
+        slide.setPreferredSize(new Dimension(600, 350));
+        slide.setBackground(BG_DARK);
+        return slide;
     }
 }

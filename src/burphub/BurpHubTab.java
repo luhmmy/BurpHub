@@ -113,15 +113,7 @@ public class BurpHubTab {
 
         dashboardPanel.add(centerPanel, BorderLayout.CENTER);
 
-        // Wrap dashboard in a scroll pane
-        JScrollPane dashboardScroll = new JScrollPane(dashboardPanel);
-        dashboardScroll.setBorder(BorderFactory.createEmptyBorder());
-        dashboardScroll.setBackground(BG_DARK);
-        dashboardScroll.setOpaque(false);
-        dashboardScroll.getViewport().setOpaque(false);
-        dashboardScroll.getVerticalScrollBar().setUnitIncrement(16); // Smoother scrolling
-
-        tabbedPane.addTab("\uD83D\uDCCA Dashboard", dashboardScroll);
+        tabbedPane.addTab("\uD83D\uDCCA Dashboard", dashboardPanel);
 
         // --- Tab 2: Wrapped ---
         WrapPanel wrapPanel = new WrapPanel(database);
@@ -150,8 +142,10 @@ public class BurpHubTab {
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-                // Fire emoji
-                g2d.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 28));
+                // Fire emoji - Use a standard JLabel for better OS compatibility if custom
+                // drawing fails
+                // But let's try a safer font or drawing method first
+                g2d.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 28));
                 g2d.setColor(Color.WHITE);
                 g2d.drawString("\uD83D\uDD25", 0, 30);
 
@@ -318,7 +312,20 @@ public class BurpHubTab {
         // Dynamic Extensions Section
         dynamicExtenderPanel = new JPanel(new GridBagLayout());
         dynamicExtenderPanel.setBackground(BG_CARD);
-        panel.add(dynamicExtenderPanel, BorderLayout.SOUTH);
+
+        // Wrap activity content in a scroll pane
+        JPanel activityContainer = new JPanel(new BorderLayout());
+        activityContainer.setOpaque(false);
+        activityContainer.add(gridPanel, BorderLayout.NORTH);
+        activityContainer.add(dynamicExtenderPanel, BorderLayout.CENTER);
+
+        JScrollPane scrollPane = new JScrollPane(activityContainer);
+        scrollPane.setBorder(null);
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(12);
+
+        panel.add(scrollPane, BorderLayout.CENTER);
 
         return panel;
     }
