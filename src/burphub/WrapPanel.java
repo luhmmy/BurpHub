@@ -23,6 +23,7 @@ public class WrapPanel extends JPanel {
     private int currentYear;
     private int currentMonth;
     private boolean isYearlyMode = false;
+    private boolean isDailyMode = false;
     private int currentSlide = 0;
     private int totalSlides = 6;
 
@@ -36,6 +37,7 @@ public class WrapPanel extends JPanel {
     // Cached data
     private DatabaseManager.MonthlyWrap monthlyData;
     private DatabaseManager.YearlyWrap yearlyData;
+    private DatabaseManager.DailyWrap dailyData;
 
     // Colors
     private static final Color BG_DARK = new Color(30, 30, 30);
@@ -66,7 +68,7 @@ public class WrapPanel extends JPanel {
 
     // Nav buttons
     private JButton prevBtn, nextBtn;
-    private JButton monthlyBtn, yearlyBtn;
+    private JButton dailyBtn, monthlyBtn, yearlyBtn;
     private JComboBox<String> monthSelector;
     private JComboBox<Integer> yearSelector;
 
@@ -114,10 +116,21 @@ public class WrapPanel extends JPanel {
         JPanel modePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         modePanel.setBackground(BG_DARK);
 
+        dailyBtn = createToggleButton("Daily", false);
         monthlyBtn = createToggleButton("Monthly", true);
         yearlyBtn = createToggleButton("Yearly", false);
 
+        dailyBtn.addActionListener(e -> {
+            isDailyMode = true;
+            isYearlyMode = false;
+            currentSlide = 0;
+            totalSlides = 5;
+            updateToggleState();
+            loadData();
+        });
+
         monthlyBtn.addActionListener(e -> {
+            isDailyMode = false;
             isYearlyMode = false;
             currentSlide = 0;
             totalSlides = 6;
@@ -126,6 +139,7 @@ public class WrapPanel extends JPanel {
         });
 
         yearlyBtn.addActionListener(e -> {
+            isDailyMode = false;
             isYearlyMode = true;
             currentSlide = 0;
             totalSlides = 8;
@@ -133,6 +147,7 @@ public class WrapPanel extends JPanel {
             loadData();
         });
 
+        modePanel.add(dailyBtn);
         modePanel.add(monthlyBtn);
         modePanel.add(yearlyBtn);
         panel.add(modePanel, BorderLayout.WEST);
@@ -203,17 +218,26 @@ public class WrapPanel extends JPanel {
     }
 
     private void updateToggleState() {
-        if (isYearlyMode) {
+        // Reset all
+        dailyBtn.setBackground(BG_CARD);
+        dailyBtn.setForeground(TEXT_SECONDARY);
+        monthlyBtn.setBackground(BG_CARD);
+        monthlyBtn.setForeground(TEXT_SECONDARY);
+        yearlyBtn.setBackground(BG_CARD);
+        yearlyBtn.setForeground(TEXT_SECONDARY);
+
+        if (isDailyMode) {
+            dailyBtn.setBackground(ACCENT_RED);
+            dailyBtn.setForeground(Color.WHITE);
+            monthSelector.setEnabled(true); // Allow selecting day within month?
+            // For now daily mode just shows "Today" for simplicity
+        } else if (isYearlyMode) {
             yearlyBtn.setBackground(ACCENT_RED);
             yearlyBtn.setForeground(Color.WHITE);
-            monthlyBtn.setBackground(BG_CARD);
-            monthlyBtn.setForeground(TEXT_SECONDARY);
             monthSelector.setEnabled(false);
         } else {
             monthlyBtn.setBackground(ACCENT_RED);
             monthlyBtn.setForeground(Color.WHITE);
-            yearlyBtn.setBackground(BG_CARD);
-            yearlyBtn.setForeground(TEXT_SECONDARY);
             monthSelector.setEnabled(true);
         }
     }
@@ -296,7 +320,16 @@ public class WrapPanel extends JPanel {
         animatedValue = 0;
 
         // Determine target value for current slide
-        if (!isYearlyMode && monthlyData != null) {
+        if (isDailyMode && dailyData != null) {
+            switch (currentSlide) {
+                case 0 -> targetValue = dailyData.totalRequests;
+                case 1 -> targetValue = dailyData.topToolCount;
+                case 2 -> targetValue = dailyData.sessionMinutes;
+                case 3 -> targetValue = dailyData.status2xx;
+                case 4 -> targetValue = dailyData.sessionsCount;
+                default -> targetValue = 0;
+            }
+        } else if (!isYearlyMode && monthlyData != null) {
             switch (currentSlide) {
                 case 0 -> targetValue = monthlyData.totalRequests;
                 case 1 -> targetValue = monthlyData.topToolCount;
@@ -334,7 +367,11 @@ public class WrapPanel extends JPanel {
 
     private void loadData() {
         try {
-            if (!isYearlyMode) {
+            if (isDailyMode) {
+                dailyData = database
+                        .getDailyWrap(LocalDate.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE));
+                totalSlides = 5;
+            } else if (!isYearlyMode) {
                 monthlyData = database.getMonthlyWrap(currentYear, currentMonth);
                 totalSlides = 6;
             } else {
@@ -368,7 +405,38 @@ public class WrapPanel extends JPanel {
     private void buildSlides() {
         slideContainer.removeAll();
 
-        if (!isYearlyMode && monthlyData != null) {
+        if (isDailyMode && dailyData != null) {
+            slideContainer.add(createStatSlide(
+                    "\uD83D\uDCC8", "Today's Total",
+                    String.valueOf(dailyData.totalRequests),
+                    "requests processed",
+                    0), "slide0");
+
+            slideContainer.add(createStatSlide(
+                    "\uD83D\uDEE0\uFE0F", "Top Tool",
+                    dailyData.topTool,
+                    formatNumber(dailyData.topToolCount) + " uses today",
+                    1), "slide1");
+
+            slideContainer.add(createStatSlide(
+                    "\u23F1\uFE0F", "Session Time",
+                    formatTime(dailyData.sessionMinutes),
+                    "spent testing today",
+                    2), "slide2");
+
+            slideContainer.add(createStatSlide(
+                    "\u2705", "Status 2xx",
+                    String.valueOf(dailyData.status2xx),
+                    "successful responses today",
+                    3), "slide3");
+
+            slideContainer.add(createStatSlide(
+                    "\uD83D\uDCAE", "Sessions",
+                    String.valueOf(dailyData.sessionsCount),
+                    "distinct sessions today",
+                    4), "slide4");
+
+        } else if (!isYearlyMode && monthlyData != null) {
             String monthName = Month.of(currentMonth).getDisplayName(TextStyle.FULL, Locale.ENGLISH);
 
             slideContainer.add(createStatSlide(

@@ -113,7 +113,15 @@ public class BurpHubTab {
 
         dashboardPanel.add(centerPanel, BorderLayout.CENTER);
 
-        tabbedPane.addTab("\uD83D\uDCCA Dashboard", dashboardPanel);
+        // Wrap dashboard in a scroll pane
+        JScrollPane dashboardScroll = new JScrollPane(dashboardPanel);
+        dashboardScroll.setBorder(BorderFactory.createEmptyBorder());
+        dashboardScroll.setBackground(BG_DARK);
+        dashboardScroll.setOpaque(false);
+        dashboardScroll.getViewport().setOpaque(false);
+        dashboardScroll.getVerticalScrollBar().setUnitIncrement(16); // Smoother scrolling
+
+        tabbedPane.addTab("\uD83D\uDCCA Dashboard", dashboardScroll);
 
         // --- Tab 2: Wrapped ---
         WrapPanel wrapPanel = new WrapPanel(database);
@@ -278,58 +286,32 @@ public class BurpHubTab {
         title.setForeground(TEXT_PRIMARY);
         panel.add(title, BorderLayout.NORTH);
 
-        // Stats grid - 12 rows (total + 11 tools), 2 columns
-        JPanel gridPanel = new JPanel(new GridLayout(12, 2, 10, 10));
+        // Stats container with GridBagLayout for flexible sizing
+        JPanel gridPanel = new JPanel(new GridBagLayout());
         gridPanel.setBackground(BG_CARD);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        gbc.insets = new Insets(5, 5, 5, 5);
 
-        todayRequestsLabel = createStatValue("0");
-        gridPanel.add(createStatLabel("Total Requests"));
-        gridPanel.add(todayRequestsLabel);
+        int row = 0;
 
-        proxyLabel = createStatValue("0");
-        gridPanel.add(createStatLabel("🔍 Proxy"));
-        gridPanel.add(proxyLabel);
-
-        repeaterLabel = createStatValue("0");
-        gridPanel.add(createStatLabel("🔄 Repeater"));
-        gridPanel.add(repeaterLabel);
-
-        intruderLabel = createStatValue("0");
-        gridPanel.add(createStatLabel("⚔️ Intruder"));
-        gridPanel.add(intruderLabel);
-
-        scannerLabel = createStatValue("0");
-        gridPanel.add(createStatLabel("🔬 Scanner"));
-        gridPanel.add(scannerLabel);
-
-        spiderLabel = createStatValue("0");
-        gridPanel.add(createStatLabel("🕷️ Spider"));
-        gridPanel.add(spiderLabel);
-
-        // New tools (non-trackable - no Burp API)
-        decoderLabel = createDimmedStatValue("N/A");
-        gridPanel.add(createStatLabel("🔤 Decoder (No API)"));
-        gridPanel.add(decoderLabel);
-
-        comparerLabel = createDimmedStatValue("N/A");
-        gridPanel.add(createStatLabel("⚖️ Comparer (No API)"));
-        gridPanel.add(comparerLabel);
-
-        sequencerLabel = createDimmedStatValue("N/A");
-        gridPanel.add(createStatLabel("🎲 Sequencer (No API)"));
-        gridPanel.add(sequencerLabel);
-
-        extenderLabel = createStatValue("0");
-        gridPanel.add(createStatLabel("🔌 Extender"));
-        gridPanel.add(extenderLabel);
-
-        targetLabel = createStatValue("0");
-        gridPanel.add(createStatLabel("🎯 Target"));
-        gridPanel.add(targetLabel);
-
-        loggerLabel = createStatValue("0");
-        gridPanel.add(createStatLabel("📝 Logger"));
-        gridPanel.add(loggerLabel);
+        // Helper to add rows consistently
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("Total Requests"), todayRequestsLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("🔍 Proxy"), proxyLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("🔄 Repeater"), repeaterLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("⚔️ Intruder"), intruderLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("🔬 Scanner"), scannerLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("🕷️ Spider"), spiderLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("🔤 Decoder (No API)"),
+                decoderLabel = createDimmedStatValue("N/A"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("⚖️ Comparer (No API)"),
+                comparerLabel = createDimmedStatValue("N/A"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("🎲 Sequencer (No API)"),
+                sequencerLabel = createDimmedStatValue("N/A"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("🔌 Extender"), extenderLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("🎯 Target"), targetLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("📝 Logger"), loggerLabel = createStatValue("0"));
 
         panel.add(gridPanel, BorderLayout.CENTER);
 
@@ -390,6 +372,16 @@ public class BurpHubTab {
         label.setForeground(new Color(100, 100, 100)); // Dimmed gray
         label.setHorizontalAlignment(SwingConstants.RIGHT);
         return label;
+    }
+
+    private void autoAddRow(JPanel panel, GridBagConstraints gbc, int row, JLabel label, JLabel value) {
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        gbc.weightx = 0.7;
+        panel.add(label, gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 0.3;
+        panel.add(value, gbc);
     }
 
     /**
@@ -471,12 +463,54 @@ public class BurpHubTab {
         private static final int CELL_GAP = 3;
         private static final int WEEKS = 53;
         private static final int DAYS = 7;
+        private static final int LEFT_MARGIN = 30;
+        private static final int TOP_MARGIN = 10;
 
         public HeatmapPanel() {
             setBackground(BG_CARD);
             setPreferredSize(new Dimension(
-                    WEEKS * (CELL_SIZE + CELL_GAP) + 30,
+                    WEEKS * (CELL_SIZE + CELL_GAP) + LEFT_MARGIN,
                     DAYS * (CELL_SIZE + CELL_GAP) + 20));
+            ToolTipManager.sharedInstance().setInitialDelay(100);
+
+            addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+                @Override
+                public void mouseMoved(java.awt.event.MouseEvent e) {
+                    updateTooltip(e.getX(), e.getY());
+                }
+            });
+        }
+
+        private void updateTooltip(int mouseX, int mouseY) {
+            if (data == null)
+                return;
+
+            int col = (mouseX - LEFT_MARGIN) / (CELL_SIZE + CELL_GAP);
+            int row = (mouseY - TOP_MARGIN) / (CELL_SIZE + CELL_GAP);
+
+            if (col < 0 || col >= WEEKS || row < 0 || row >= DAYS) {
+                setToolTipText(null);
+                return;
+            }
+
+            // Find the date for this cell
+            LocalDate today = LocalDate.now();
+            LocalDate startDate = today.minusDays(364);
+            int startDayOfWeek = startDate.getDayOfWeek().getValue() % 7;
+
+            // Calculate total days from start to this cell
+            int daysFromStart = (col * 7) + row - startDayOfWeek;
+
+            if (daysFromStart < 0 || daysFromStart >= 365) {
+                setToolTipText(null);
+                return;
+            }
+
+            LocalDate targetDate = startDate.plusDays(daysFromStart);
+            String dateStr = targetDate.format(DateTimeFormatter.ISO_LOCAL_DATE);
+            int activity = data.getOrDefault(dateStr, 0);
+
+            setToolTipText(String.format("<html><b>%s</b><br>%d requests</html>", dateStr, activity));
         }
 
         public void setData(Map<String, Integer> data) {
@@ -535,8 +569,8 @@ public class BurpHubTab {
                     level = 4;
                 }
 
-                int x = 30 + col * (CELL_SIZE + CELL_GAP);
-                int y = 10 + row * (CELL_SIZE + CELL_GAP);
+                int x = LEFT_MARGIN + col * (CELL_SIZE + CELL_GAP);
+                int y = TOP_MARGIN + row * (CELL_SIZE + CELL_GAP);
 
                 g2d.setColor(HEATMAP_COLORS[level]);
                 g2d.fillRoundRect(x, y, CELL_SIZE, CELL_SIZE, 3, 3);

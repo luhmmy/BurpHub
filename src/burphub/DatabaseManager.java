@@ -568,6 +568,31 @@ public class DatabaseManager {
         }
     }
 
+    public static class DailyWrap {
+        public final String date;
+        public final int totalRequests;
+        public final String topTool;
+        public final int topToolCount;
+        public final int sessionMinutes;
+        public final int sessionsCount;
+        public final int status2xx;
+        public final int status4xx;
+        public final int status5xx;
+
+        public DailyWrap(String date, int totalRequests, String topTool, int topToolCount,
+                int sessionMinutes, int sessionsCount, int status2xx, int status4xx, int status5xx) {
+            this.date = date;
+            this.totalRequests = totalRequests;
+            this.topTool = topTool;
+            this.topToolCount = topToolCount;
+            this.sessionMinutes = sessionMinutes;
+            this.sessionsCount = sessionsCount;
+            this.status2xx = status2xx;
+            this.status4xx = status4xx;
+            this.status5xx = status5xx;
+        }
+    }
+
     // ==================== Wrap Queries ====================
 
     public MonthlyWrap getMonthlyWrap(int year, int month) throws SQLException {
@@ -760,6 +785,64 @@ public class DatabaseManager {
         return new YearlyWrap(year, totalRequests, topTool, topToolCount,
                 mostActiveDay, mostActiveDayCount, mostActiveMonth, mostActiveMonthCount,
                 totalMinutes, activeDays, longestStreak, monthlyTotals);
+    }
+
+    public DailyWrap getDailyWrap(String date) throws SQLException {
+        DailyStats stats = null;
+        String sql = "SELECT * FROM daily_stats WHERE date = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, date);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                stats = new DailyStats(
+                        rs.getString("date"),
+                        rs.getInt("intercepted_requests"),
+                        rs.getInt("repeater_requests"),
+                        rs.getInt("intruder_requests"),
+                        rs.getInt("scanner_requests"),
+                        rs.getInt("spider_requests"),
+                        rs.getInt("session_minutes"),
+                        rs.getInt("sessions_count"));
+            }
+        }
+
+        if (stats == null) {
+            return new DailyWrap(date, 0, "None", 0, 0, 0, 0, 0, 0);
+        }
+
+        // Find top tool for the day
+        String topTool = "None";
+        int topToolCount = 0;
+        int[] counts = { stats.interceptedRequests, stats.repeaterRequests, stats.intruderRequests,
+                stats.scannerRequests, stats.spiderRequests };
+        String[] toolNames = { "Proxy", "Repeater", "Intruder", "Scanner", "Spider" };
+        for (int i = 0; i < counts.length; i++) {
+            if (counts[i] > topToolCount) {
+                topToolCount = counts[i];
+                topTool = toolNames[i];
+            }
+        }
+
+        // Get status code breakdown
+        int s2xx = 0, s4xx = 0, s5xx = 0;
+        String statusSql = "SELECT status_code, count FROM status_counts WHERE date = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(statusSql)) {
+            pstmt.setString(1, date);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                int code = rs.getInt("status_code");
+                int count = rs.getInt("count");
+                if (code >= 200 && code < 300)
+                    s2xx += count;
+                else if (code >= 400 && code < 500)
+                    s4xx += count;
+                else if (code >= 500 && code < 600)
+                    s5xx += count;
+            }
+        }
+
+        return new DailyWrap(date, stats.getTotalRequests(), topTool, topToolCount,
+                stats.sessionMinutes, stats.sessionsCount, s2xx, s4xx, s5xx);
     }
 
     /**
