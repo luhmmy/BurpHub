@@ -102,6 +102,7 @@ public class DatabaseManager {
                 """
                         CREATE TABLE IF NOT EXISTS settings (
                             setting_key TEXT PRIMARY KEY,
+                            setting_value TEXT
                         )
                         """,
                 // Tracked extensions (loaded by user)
