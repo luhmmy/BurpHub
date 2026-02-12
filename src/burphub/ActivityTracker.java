@@ -35,6 +35,7 @@ public class ActivityTracker {
 
     // In-memory counters for current session (for quick access)
     private final EnumMap<Tool, Integer> todayCounts = new EnumMap<>(Tool.class);
+    private final java.util.Map<String, Integer> extenderCounts = new java.util.HashMap<>();
 
     public ActivityTracker(DatabaseManager database) {
         this.database = database;
@@ -61,7 +62,35 @@ public class ActivityTracker {
         }
     }
 
-    // ==================== Recording Methods ====================
+    /**
+     * Increment activity for a third-party extension
+     */
+    public void recordExtensionActivity(String name) {
+        try {
+            database.incrementExtensionActivity(name);
+            extenderCounts.merge(name, 1, Integer::sum);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Inform tracker about a loaded extension
+     */
+    public void registerExtension(String name) {
+        try {
+            database.recordExtensionPresence(name);
+            if (!extenderCounts.containsKey(name)) {
+                extenderCounts.put(name, database.getExtensionActivity(name));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public java.util.Map<String, Integer> getExtenderCounts() {
+        return extenderCounts;
+    }
 
     /**
      * Generic method to record activity for any tool

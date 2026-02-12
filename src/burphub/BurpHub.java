@@ -67,6 +67,10 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
             callbacks.registerScopeChangeListener(this);
             stdout.println("[+] Listeners registered");
 
+            // Initial extension scan
+            scanExtensions();
+            stdout.println("[+] Third-party extensions scanned");
+
             stdout.println("\n[*] BurpHub is ready! Check the 'BurpHub' tab for stats.");
 
         } catch (Exception e) {
@@ -155,6 +159,9 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
                     tracker.recordSequencerOperation();
                     break;
                 case IBurpExtenderCallbacks.TOOL_EXTENDER:
+                    // HACK: Use stack trace to identify the extension
+                    String extName = identifyExtension();
+                    tracker.recordExtensionActivity(extName);
                     tracker.recordExtenderEvent();
                     break;
                 case IBurpExtenderCallbacks.TOOL_TARGET:
@@ -225,6 +232,47 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
     @Override
     public String getTabCaption() {
         return "BurpHub";
+    }
+
+    /**
+     * Identify the calling extension using stack trace analysis
+     */
+    private String identifyExtension() {
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        for (StackTraceElement element : stackTrace) {
+            String className = element.getClassName();
+            // Look for non-BurpHub, non-Burp internal classes
+            if (!className.startsWith("burphub.") &&
+                    !className.startsWith("java.") &&
+                    !className.startsWith("sun.") &&
+                    !className.startsWith("burp.IBurp") &&
+                    !className.startsWith("burp.IProxy") &&
+                    !className.startsWith("burp.IHttp") &&
+                    !className.equals("java.lang.Thread")) {
+
+                // Extract "extension" name from class package
+                // e.g. "burp.Autorize.Autorize" -> "Autorize"
+                String[] parts = className.split("\\.");
+                if (parts.length > 2) {
+                    return parts[parts.length - 2];
+                }
+                return parts[parts.length - 1];
+            }
+        }
+        return "Unknown Extension";
+    }
+
+    /**
+     * Scan for all loaded extensions and register them
+     */
+    private void scanExtensions() {
+        if (callbacks == null || tracker == null)
+            return;
+
+        // Since we can't get names directly from the API, we'll rely on
+        // identifyExtension() during runtime traffic.
+        // We register a generic entry to ensure the UI space is initialized.
+        tracker.registerExtension("Extender Traffic");
     }
 
     @Override

@@ -102,7 +102,15 @@ public class DatabaseManager {
                 """
                         CREATE TABLE IF NOT EXISTS settings (
                             setting_key TEXT PRIMARY KEY,
-                            setting_value TEXT
+                        )
+                        """,
+                // Tracked extensions (loaded by user)
+                """
+                        CREATE TABLE IF NOT EXISTS extensions (
+                            name TEXT PRIMARY KEY,
+                            install_date TEXT,
+                            last_seen TEXT,
+                            activity_count INTEGER DEFAULT 0
                         )
                         """
         };
@@ -845,9 +853,55 @@ public class DatabaseManager {
                 stats.sessionMinutes, stats.sessionsCount, s2xx, s4xx, s5xx);
     }
 
-    /**
-     * Get a setting value
-     */
+    public void recordExtensionPresence(String name) throws SQLException {
+        String sql = """
+                    MERGE INTO extensions (name, install_date, last_seen)
+                    KEY (name)
+                    VALUES (?, COALESCE((SELECT install_date FROM extensions WHERE name = ?), ?), ?)
+                """;
+        String today = today();
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            pstmt.setString(2, name);
+            pstmt.setString(3, today);
+            pstmt.setString(4, today);
+            pstmt.executeUpdate();
+        }
+    }
+
+    public void incrementExtensionActivity(String name) throws SQLException {
+        String sql = "UPDATE extensions SET activity_count = activity_count + 1, last_seen = ? WHERE name = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, today());
+            pstmt.setString(2, name);
+            pstmt.executeUpdate();
+        }
+    }
+
+    public java.util.List<String> getActiveExtensions() throws SQLException {
+        java.util.List<String> list = new java.util.ArrayList<>();
+        String sql = "SELECT name FROM extensions WHERE last_seen = ? ORDER BY name ASC";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, today());
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                list.add(rs.getString("name"));
+            }
+        }
+        return list;
+    }
+
+    public int getExtensionActivity(String name) throws SQLException {
+        String sql = "SELECT activity_count FROM extensions WHERE name = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next())
+                return rs.getInt("activity_count");
+        }
+        return 0;
+    }
+
     public String getSetting(String key, String defaultValue) throws SQLException {
         String sql = "SELECT setting_value FROM settings WHERE setting_key = ?";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {

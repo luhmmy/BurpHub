@@ -315,8 +315,15 @@ public class BurpHubTab {
 
         panel.add(gridPanel, BorderLayout.CENTER);
 
+        // Dynamic Extensions Section
+        dynamicExtenderPanel = new JPanel(new GridBagLayout());
+        dynamicExtenderPanel.setBackground(BG_CARD);
+        panel.add(dynamicExtenderPanel, BorderLayout.SOUTH);
+
         return panel;
     }
+
+    private JPanel dynamicExtenderPanel;
 
     private JPanel createAllTimeStatsPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 15));
@@ -425,6 +432,25 @@ public class BurpHubTab {
                 Map<String, Integer> heatmapData = database.getActivityHeatmap(365);
                 heatmapPanel.setData(heatmapData);
                 signalChartPanel.setData(heatmapData);
+
+                // Update dynamic extensions
+                java.util.Map<String, Integer> extenderCounts = tracker.getExtenderCounts();
+                if (!extenderCounts.isEmpty()) {
+                    dynamicExtenderPanel.removeAll();
+                    GridBagConstraints gbc_dyn = new GridBagConstraints();
+                    gbc_dyn.fill = GridBagConstraints.HORIZONTAL;
+                    gbc_dyn.weightx = 1.0;
+                    gbc_dyn.insets = new Insets(5, 5, 5, 5);
+                    int dRow = 0;
+
+                    for (java.util.Map.Entry<String, Integer> entry : extenderCounts.entrySet()) {
+                        autoAddRow(dynamicExtenderPanel, gbc_dyn, dRow++,
+                                createStatLabel("🔌 " + entry.getKey()),
+                                createStatValue(String.valueOf(entry.getValue())));
+                    }
+                    dynamicExtenderPanel.revalidate();
+                    dynamicExtenderPanel.repaint();
+                }
 
             } catch (SQLException e) {
                 e.printStackTrace();
