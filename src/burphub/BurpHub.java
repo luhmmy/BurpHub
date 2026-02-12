@@ -2,6 +2,9 @@ package burphub;
 
 import burp.*;
 import java.io.PrintWriter;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import javax.swing.SwingUtilities;
 
 /**
@@ -20,6 +23,7 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
     private DatabaseManager database;
     private ActivityTracker tracker;
     private BurpHubTab uiTab;
+    private ScheduledExecutorService scheduler;
 
     private long sessionStartTime;
 
@@ -70,6 +74,10 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
             // Initial extension scan
             scanExtensions();
             stdout.println("[+] Third-party extensions scanned");
+
+            // Start background sync (every 5 minutes)
+            startBackgroundSync();
+            stdout.println("[+] Background sync scheduler started");
 
             stdout.println("\n[*] BurpHub is ready! Check the 'BurpHub' tab for stats.");
 
@@ -223,6 +231,10 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
     public void extensionUnloaded() {
         stdout.println("\n[*] BurpHub shutting down...");
 
+        if (scheduler != null) {
+            scheduler.shutdownNow();
+        }
+
         if (tracker != null) {
             // Calculate session duration
             long sessionMinutes = (System.currentTimeMillis() - sessionStartTime) / 60000;
@@ -289,18 +301,45 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
                     !className.startsWith("burp.IBurp") &&
                     !className.startsWith("burp.IProxy") &&
                     !className.startsWith("burp.IHttp") &&
-                    !className.equals("java.lang.Thread")) {
+                    !className.startsWith("burp.IRequest") &&
+                    !className.startsWith("burp.IResponse") &&
+                    !className.startsWith("burp.IMessage") &&
+                    !className.startsWith("burp.IExtension") &&
+                    !className.startsWith("burp.IContextMenu") &&
+                    !className.equals("java.lang.Thread") &&
+                    !className.contains(".ActivityTracker") &&
+                    !className.contains(".CloudSync") &&
+                    !className.contains(".DatabaseManager")) {
 
                 // Extract "extension" name from class package
                 // e.g. "burp.Autorize.Autorize" -> "Autorize"
                 String[] parts = className.split("\\.");
                 if (parts.length > 2) {
+                    // Avoid returning purely "burp" or "internal"
+                    if (parts[parts.length - 2].equalsIgnoreCase("burp"))
+                        return parts[parts.length - 1];
                     return parts[parts.length - 2];
                 }
                 return parts[parts.length - 1];
             }
         }
-        return "Unknown Extension";
+        return "Unknown Tool";
+    }
+
+    private void startBackgroundSync() {
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                String apiUrl = System.getProperty("burphub.api.url");
+                String apiKey = System.getProperty("burphub.api.key");
+
+                if (apiUrl != null && apiKey != null && database != null) {
+                    CloudSync.syncData(apiUrl, apiKey, database, callbacks);
+                }
+            } catch (Exception e) {
+                // Background sync fail is silent to not disturb user
+            }
+        }, 2, 2, TimeUnit.MINUTES);
     }
 
     /**

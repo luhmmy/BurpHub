@@ -67,6 +67,8 @@ public class ActivityTracker {
      */
     public void recordExtensionActivity(String name) {
         try {
+            // Ensure extension is in database first
+            database.recordExtensionPresence(name);
             database.incrementExtensionActivity(name);
             extenderCounts.merge(name, 1, Integer::sum);
         } catch (SQLException e) {
