@@ -102,6 +102,11 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
         if (tracker == null)
             return;
 
+        // OWASP A01: Respect user-defined scope
+        if (!isRequestInScope(message.getMessageInfo())) {
+            return;
+        }
+
         if (messageIsRequest) {
             // Track intercepted request
             IHttpRequestResponse messageInfo = message.getMessageInfo();
@@ -133,6 +138,11 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
     public void processHttpMessage(int toolFlag, boolean messageIsRequest, IHttpRequestResponse messageInfo) {
         if (tracker == null)
             return;
+
+        // OWASP A01: Respect user-defined scope
+        if (!isRequestInScope(messageInfo)) {
+            return;
+        }
 
         if (messageIsRequest) {
             // Track which tool sent the request
@@ -173,6 +183,37 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
             if (tracker.getTotalRequestsToday() % 10 == 0 && uiTab != null) {
                 SwingUtilities.invokeLater(() -> uiTab.refreshStats());
             }
+        }
+    }
+
+    /**
+     * Checks if a request should be recorded based on the "filter_in_scope"
+     * setting.
+     */
+    private boolean isRequestInScope(IHttpRequestResponse messageInfo) {
+        try {
+            if (database == null)
+                return true;
+
+            String filterInScope = database.getSetting("filter_in_scope", "false");
+            if (!"true".equals(filterInScope)) {
+                return true; // Filtering not enabled, record everything
+            }
+
+            if (messageInfo == null)
+                return true;
+
+            byte[] request = messageInfo.getRequest();
+            if (request == null)
+                return true;
+
+            IRequestInfo requestInfo = helpers.analyzeRequest(messageInfo);
+            java.net.URL url = requestInfo.getUrl();
+            return callbacks.isInScope(url);
+
+        } catch (Exception e) {
+            // Default to recording on error to avoid missing data, but log it
+            return true;
         }
     }
 

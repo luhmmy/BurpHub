@@ -776,6 +776,8 @@ public class BurpHubTab {
         addSettingField(formPanel, gbc, "Profile Bio:", "profile_bio", "e.g. Security Researcher");
         gbc.gridy++;
         addSettingField(formPanel, gbc, "GitHub URL:", "profile_github", "e.g. https://github.com/username");
+        gbc.gridy++;
+        addSettingCheckbox(formPanel, gbc, "Record In-Scope Traffic Only", "filter_in_scope");
 
         gbc.gridy++;
         gbc.gridwidth = 2;
@@ -797,6 +799,12 @@ public class BurpHubTab {
                         String key = (String) tf.getClientProperty("setting_key");
                         if (key != null) {
                             database.setSetting(key, tf.getText());
+                        }
+                    } else if (cmp instanceof JCheckBox) {
+                        JCheckBox cb = (JCheckBox) cmp;
+                        String key = (String) cb.getClientProperty("setting_key");
+                        if (key != null) {
+                            database.setSetting(key, String.valueOf(cb.isSelected()));
                         }
                     }
                 }
@@ -880,5 +888,25 @@ public class BurpHubTab {
 
         gbc.gridx = 1;
         panel.add(field, gbc);
+    }
+
+    private void addSettingCheckbox(JPanel panel, GridBagConstraints gbc, String labelText, String settingKey) {
+        JCheckBox checkBox = new JCheckBox(labelText);
+        checkBox.setBackground(new Color(45, 45, 45, 0)); // Transparent bg
+        checkBox.setForeground(TEXT_SECONDARY);
+        checkBox.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        checkBox.setFocusPainted(false);
+        checkBox.putClientProperty("setting_key", settingKey);
+
+        try {
+            boolean isSelected = "true".equals(database.getSetting(settingKey, "false"));
+            checkBox.setSelected(isSelected);
+        } catch (SQLException e) {
+            /* ignore */ }
+
+        gbc.gridx = 0;
+        gbc.gridwidth = 2;
+        panel.add(checkBox, gbc);
+        gbc.gridwidth = 1; // reset
     }
 }
