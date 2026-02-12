@@ -510,7 +510,7 @@ public class BurpHubTab {
             String dateStr = targetDate.format(DateTimeFormatter.ISO_LOCAL_DATE);
             int activity = data.getOrDefault(dateStr, 0);
 
-            setToolTipText(String.format("<html><b>%s</b><br>%d requests</html>", dateStr, activity));
+            setToolTipText(dateStr + ": " + activity + " requests");
         }
 
         public void setData(Map<String, Integer> data) {
