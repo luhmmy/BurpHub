@@ -25,6 +25,8 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
     private BurpHubTab uiTab;
     private ScheduledExecutorService scheduler;
 
+    private boolean filterInScopeEnabled = false;
+    private long lastFilterCheckTime = 0;
     private long sessionStartTime;
 
     @Override
@@ -199,29 +201,41 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
      * setting.
      */
     private boolean isRequestInScope(IHttpRequestResponse messageInfo) {
-        try {
-            if (database == null)
-                return true;
+        if (database == null)
+            return true;
 
-            String filterInScope = database.getSetting("filter_in_scope", "false");
-            if (!"true".equals(filterInScope)) {
-                return true; // Filtering not enabled, record everything
+        try {
+            // Cache filter status for 10 seconds to avoid heavy DB load
+            if (System.currentTimeMillis() - lastFilterCheckTime > 10000) {
+                String setting = database.getSetting("filter_in_scope", "false");
+                filterInScopeEnabled = "true".equals(setting);
+                lastFilterCheckTime = System.currentTimeMillis();
+            }
+
+            if (!filterInScopeEnabled) {
+                return true; // Filtering not enabled, record always
             }
 
             if (messageInfo == null)
-                return true;
+                return false;
 
-            byte[] request = messageInfo.getRequest();
-            if (request == null)
-                return true;
+            // Robust URL extraction
+            IHttpService service = messageInfo.getHttpService();
+            byte[] requestBytes = messageInfo.getRequest();
 
-            IRequestInfo requestInfo = helpers.analyzeRequest(messageInfo);
+            if (service == null || requestBytes == null) {
+                return false; // Can't determine scope without service/request
+            }
+
+            // Burp's analyzeRequest handles building the full URL correctly
+            IRequestInfo requestInfo = helpers.analyzeRequest(service, requestBytes);
             java.net.URL url = requestInfo.getUrl();
+
             return callbacks.isInScope(url);
 
         } catch (Exception e) {
-            // Default to recording on error to avoid missing data, but log it
-            return true;
+            // Safety: if filter is enabled but check fails, don't record
+            return !filterInScopeEnabled;
         }
     }
 
