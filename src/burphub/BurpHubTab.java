@@ -183,8 +183,8 @@ public class BurpHubTab {
         JPanel streakPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 0));
         streakPanel.setOpaque(false);
 
-        streakLabel = createStreakBadge(">> 0 day streak", ACCENT_ORANGE);
-        longestStreakLabel = createStreakBadge("* Best: 0 days", TEXT_SECONDARY);
+        streakLabel = createStreakBadge("0 day streak", ACCENT_ORANGE, true);
+        longestStreakLabel = createStreakBadge("Best: 0 days", TEXT_SECONDARY, false);
 
         streakPanel.add(longestStreakLabel);
         streakPanel.add(streakLabel);
@@ -262,13 +262,22 @@ public class BurpHubTab {
         return panel;
     }
 
-    private JLabel createStreakBadge(String text, Color color) {
-        JLabel label = new JLabel(text);
+    private JLabel createStreakBadge(String text, Color color, boolean showFlame) {
+        JLabel label = new JLabel(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (showFlame) {
+                    Graphics2D g2d = (Graphics2D) g;
+                    drawFlame(g2d, 10, 10, 14, 18);
+                }
+            }
+        };
         label.setFont(new Font("Segoe UI", Font.BOLD, 16));
         label.setForeground(color);
         label.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(color.darker(), 1),
-                BorderFactory.createEmptyBorder(8, 15, 8, 15)));
+                BorderFactory.createEmptyBorder(8, showFlame ? 30 : 15, 8, 15)));
         return label;
     }
 
@@ -365,13 +374,13 @@ public class BurpHubTab {
         autoAddRow(gridPanel, gbc, row++, createStatLabel("[P] Proxy"), proxyLabel = createStatValue("0"));
         autoAddRow(gridPanel, gbc, row++, createStatLabel("[R] Repeater"), repeaterLabel = createStatValue("0"));
         autoAddRow(gridPanel, gbc, row++, createStatLabel("[I] Intruder"), intruderLabel = createStatValue("0"));
-        autoAddRow(gridPanel, gbc, row++, createStatLabel("[S] Scanner"), scannerLabel = createStatValue("0"));
-        autoAddRow(gridPanel, gbc, row++, createStatLabel("[W] Spider"), spiderLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("[Sc] Scanner"), scannerLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("[Sp] Spider"), spiderLabel = createStatValue("0"));
         autoAddRow(gridPanel, gbc, row++, createStatLabel("[D] Decoder (No API)"),
                 decoderLabel = createDimmedStatValue("N/A"));
         autoAddRow(gridPanel, gbc, row++, createStatLabel("[C] Comparer (No API)"),
                 comparerLabel = createDimmedStatValue("N/A"));
-        autoAddRow(gridPanel, gbc, row++, createStatLabel("[Q] Sequencer (No API)"),
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("[Se] Sequencer (No API)"),
                 sequencerLabel = createDimmedStatValue("N/A"));
         autoAddRow(gridPanel, gbc, row++, createStatLabel("[E] Extender"), extenderLabel = createStatValue("0"));
         autoAddRow(gridPanel, gbc, row++, createStatLabel("[T] Target"), targetLabel = createStatValue("0"));
@@ -1002,37 +1011,37 @@ public class BurpHubTab {
     }
 
     /**
-     * Helper to draw a flame icon using vector paths
+     * Helper to draw a flame icon using vector paths (Minimalist Outline Style)
      */
     private void drawFlame(Graphics2D g2d, int x, int y, int width, int height) {
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 
-        // Outer flame (Orange)
-        java.awt.geom.Path2D outer = new java.awt.geom.Path2D.Double();
-        outer.moveTo(x + width * 0.5, y + height);
-        outer.curveTo(x + width * 0.1, y + height, x, y + height * 0.7, x + width * 0.2, y + height * 0.4);
-        outer.curveTo(x + width * 0.1, y + height * 0.2, x + width * 0.4, y, x + width * 0.5, y + height * 0.2);
-        outer.curveTo(x + width * 0.6, y, x + width * 0.9, y + height * 0.2, x + width * 0.8, y + height * 0.4);
-        outer.curveTo(x + width, y + height * 0.7, x + width * 0.9, y + height, x + width * 0.5, y + height);
-        outer.closePath();
+        // Use color passed or white by default
+        if (g2d.getColor().equals(Color.BLACK)) {
+            g2d.setColor(Color.WHITE);
+        }
 
-        g2d.setColor(new Color(255, 100, 0));
-        g2d.fill(outer);
+        // Elegant outline flame path
+        java.awt.geom.Path2D flame = new java.awt.geom.Path2D.Double();
+        flame.moveTo(x + width * 0.5, y + height * 0.9);
+        flame.curveTo(x + width * 0.1, y + height * 0.9, x + width * 0.05, y + height * 0.6, x + width * 0.25,
+                y + height * 0.35);
+        flame.curveTo(x + width * 0.2, y + height * 0.1, x + width * 0.45, y, x + width * 0.5, y + height * 0.2);
+        flame.curveTo(x + width * 0.55, y, x + width * 0.8, y + height * 0.1, x + width * 0.75, y + height * 0.35);
+        flame.curveTo(x + width * 0.95, y + height * 0.6, x + width * 0.9, y + height * 0.9, x + width * 0.5,
+                y + height * 0.9);
 
-        // Inner flame (Yellow/White)
-        java.awt.geom.Path2D inner = new java.awt.geom.Path2D.Double();
-        inner.moveTo(x + width * 0.5, y + height * 0.85);
-        inner.curveTo(x + width * 0.3, y + height * 0.85, x + width * 0.25, y + height * 0.65, x + width * 0.35,
-                y + height * 0.5);
-        inner.curveTo(x + width * 0.3, y + height * 0.4, x + width * 0.45, y + height * 0.3, x + width * 0.5,
-                y + height * 0.4);
-        inner.curveTo(x + width * 0.55, y + height * 0.3, x + width * 0.7, y + height * 0.4, x + width * 0.65,
-                y + height * 0.5);
-        inner.curveTo(x + width * 0.75, y + height * 0.65, x + width * 0.7, y + height * 0.85, x + width * 0.5,
-                y + height * 0.85);
-        inner.closePath();
+        // Draw the main outline
+        g2d.draw(flame);
 
-        g2d.setColor(new Color(255, 230, 0));
-        g2d.fill(inner);
+        // Inner spark detail
+        java.awt.geom.Path2D spark = new java.awt.geom.Path2D.Double();
+        spark.moveTo(x + width * 0.5, y + height * 0.75);
+        spark.curveTo(x + width * 0.35, y + height * 0.75, x + width * 0.35, y + height * 0.55, x + width * 0.5,
+                y + height * 0.45);
+        spark.curveTo(x + width * 0.65, y + height * 0.55, x + width * 0.65, y + height * 0.75, x + width * 0.5,
+                y + height * 0.75);
+        g2d.draw(spark);
     }
 }

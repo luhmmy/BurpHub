@@ -245,8 +245,8 @@ public class WrapPanel extends JPanel {
         panel.setBackground(BG_DARK);
         panel.setBorder(BorderFactory.createEmptyBorder(15, 0, 0, 0));
 
-        prevBtn = createNavButton("\u25C0  Prev");
-        nextBtn = createNavButton("Next  \u25B6");
+        prevBtn = createNavButton("<html><font face='Segoe UI Emoji'>\u25C0</font>  Prev</html>");
+        nextBtn = createNavButton("<html>Next  <font face='Segoe UI Emoji'>\u25B6</font></html>");
 
         prevBtn.addActionListener(e -> navigateSlide(-1));
         nextBtn.addActionListener(e -> navigateSlide(1));
@@ -405,31 +405,31 @@ public class WrapPanel extends JPanel {
 
         if (isDailyMode && dailyData != null) {
             slideContainer.add(createStatSlide(
-                    "\uD83D\uDCC8", "Today's Total",
+                    "<html><font face='Segoe UI Emoji'>\uD83D\uDCC8</font></html>", "Today's Total",
                     String.valueOf(dailyData.totalRequests),
                     "requests processed",
                     0), "slide0");
 
             slideContainer.add(createStatSlide(
-                    "\uD83D\uDEE0\uFE0F", "Top Tool",
+                    "<html><font face='Segoe UI Emoji'>\uD83D\uDEE0\uFE0F</font></html>", "Top Tool",
                     dailyData.topTool,
                     formatNumber(dailyData.topToolCount) + " uses today",
                     1), "slide1");
 
             slideContainer.add(createStatSlide(
-                    "\u23F1\uFE0F", "Session Time",
+                    "<html><font face='Segoe UI Emoji'>\u23F1\uFE0F</font></html>", "Session Time",
                     formatTime(dailyData.sessionMinutes),
                     "spent testing today",
                     2), "slide2");
 
             slideContainer.add(createStatSlide(
-                    "\u2705", "Status 2xx",
+                    "<html><font face='Segoe UI Emoji'>\u2705</font></html>", "Status 2xx",
                     String.valueOf(dailyData.status2xx),
                     "successful responses today",
                     3), "slide3");
 
             slideContainer.add(createStatSlide(
-                    "\uD83D\uDCAE", "Sessions",
+                    "<html><font face='Segoe UI Emoji'>\uD83D\uDCAE</font></html>", "Sessions",
                     String.valueOf(dailyData.sessionsCount),
                     "distinct sessions today",
                     4), "slide4");
@@ -448,31 +448,31 @@ public class WrapPanel extends JPanel {
             String monthName = Month.of(currentMonth).getDisplayName(TextStyle.FULL, Locale.ENGLISH);
 
             slideContainer.add(createStatSlide(
-                    "\uD83C\uDFAF", "Total Requests",
+                    "<html><font face='Segoe UI Emoji'>\uD83C\uDFAF</font></html>", "Total Requests",
                     String.valueOf(monthlyData.totalRequests),
                     monthName + " " + currentYear,
                     0), "slide0");
 
             slideContainer.add(createStatSlide(
-                    "\uD83D\uDEE0\uFE0F", "Your #1 Tool",
+                    "<html><font face='Segoe UI Emoji'>\uD83D\uDEE0\uFE0F</font></html>", "Your #1 Tool",
                     monthlyData.topTool,
                     formatNumber(monthlyData.topToolCount) + " uses",
                     1), "slide1");
 
             slideContainer.add(createStatSlide(
-                    "\uD83D\uDD25", "Most Active Day",
+                    "<html><font face='Segoe UI Emoji'>\uD83D\uDD25</font></html>", "Most Active Day",
                     monthlyData.mostActiveDay,
                     formatNumber(monthlyData.mostActiveDayCount) + " requests",
                     2), "slide2");
 
             slideContainer.add(createStatSlide(
-                    "\u23F1\uFE0F", "Time Invested",
+                    "[Time]", "Time Invested",
                     formatTime(monthlyData.totalMinutes),
                     "of security testing",
                     3), "slide3");
 
             slideContainer.add(createStatSlide(
-                    "\uD83D\uDCC5", "Active Days",
+                    "[Days]", "Active Days",
                     monthlyData.activeDays + " / " + monthlyData.daysInMonth,
                     "days you showed up",
                     4), "slide4");
@@ -480,7 +480,8 @@ public class WrapPanel extends JPanel {
             int change = monthlyData.getChangePercent();
             String changeStr = (change >= 0 ? "+" : "") + change + "%";
             slideContainer.add(createStatSlide(
-                    change >= 0 ? "\uD83D\uDCC8" : "\uD83D\uDCC9",
+                    change >= 0 ? "<html><font face='Segoe UI Emoji'>\uD83D\uDCC8</font></html>"
+                            : "<html><font face='Segoe UI Emoji'>\uD83D\uDCC9</font></html>",
                     "vs Last Month",
                     changeStr,
                     change >= 0 ? "Keep pushing!" : "Time to grind!",
@@ -488,43 +489,43 @@ public class WrapPanel extends JPanel {
 
         } else if (isYearlyMode && yearlyData != null) {
             slideContainer.add(createStatSlide(
-                    "\uD83C\uDFAF", "Total Requests",
+                    "<html><font face='Segoe UI Emoji'>\uD83C\uDFAF</font></html>", "Total Requests",
                     String.valueOf(yearlyData.totalRequests),
                     "in " + currentYear,
                     0), "slide0");
 
             slideContainer.add(createStatSlide(
-                    "\uD83D\uDEE0\uFE0F", "Your #1 Tool",
+                    "<html><font face='Segoe UI Emoji'>\uD83D\uDEE0\uFE0F</font></html>", "Your #1 Tool",
                     yearlyData.topTool,
                     formatNumber(yearlyData.topToolCount) + " uses",
                     1), "slide1");
 
             slideContainer.add(createStatSlide(
-                    "\uD83D\uDD25", "Busiest Day",
+                    "<html><font face='Segoe UI Emoji'>\uD83D\uDD25</font></html>", "Busiest Day",
                     yearlyData.mostActiveDay,
                     formatNumber(yearlyData.mostActiveDayCount) + " requests",
                     2), "slide2");
 
             slideContainer.add(createStatSlide(
-                    "\u23F1\uFE0F", "Time Invested",
+                    "<html><font face='Segoe UI Emoji'>\u23F1\uFE0F</font></html>", "Time Invested",
                     formatTime(yearlyData.totalMinutes),
                     "of security testing",
                     3), "slide3");
 
             slideContainer.add(createStatSlide(
-                    "\uD83D\uDCC5", "Active Days",
+                    "<html><font face='Segoe UI Emoji'>\uD83D\uDCC5</font></html>", "Active Days",
                     String.valueOf(yearlyData.activeDays),
                     "days you showed up in " + currentYear,
                     4), "slide4");
 
             slideContainer.add(createStatSlide(
-                    "\uD83D\uDCC6", "Busiest Month",
+                    "<html><font face='Segoe UI Emoji'>\uD83D\uDCC6</font></html>", "Busiest Month",
                     yearlyData.mostActiveMonth,
                     formatNumber(yearlyData.mostActiveMonthCount) + " requests",
                     5), "slide5");
 
             slideContainer.add(createStatSlide(
-                    "\uD83C\uDFC6", "Longest Streak",
+                    "<html><font face='Segoe UI Emoji'>\uD83C\uDFC6</font></html>", "Longest Streak",
                     yearlyData.longestStreak + " days",
                     "consecutive testing days",
                     6), "slide6");
@@ -571,7 +572,7 @@ public class WrapPanel extends JPanel {
                         AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.max(0f, Math.min(1f, fadeAlpha))));
 
                 // Emoji
-                g2d.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 48));
+                g2d.setFont(new Font("Segoe UI", Font.PLAIN, 48));
                 FontMetrics efm = g2d.getFontMetrics();
                 int ey = getHeight() / 2 - 80;
                 g2d.setColor(Color.WHITE);
@@ -661,7 +662,7 @@ public class WrapPanel extends JPanel {
                 // Title
                 g2d.setFont(new Font("Segoe UI", Font.BOLD, 18));
                 g2d.setColor(ACCENT_RED);
-                String chartTitle = "\uD83D\uDCCA Month-by-Month Activity — " + currentYear;
+                String chartTitle = "[Chart] Month-by-Month Activity — " + currentYear;
                 FontMetrics tfm = g2d.getFontMetrics();
                 g2d.drawString(chartTitle, (getWidth() - tfm.stringWidth(chartTitle)) / 2, 35);
 
