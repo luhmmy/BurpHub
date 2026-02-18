@@ -38,23 +38,47 @@ public class DatabaseManager {
 
             String url = DB_URL_PREFIX + dbPath;
             try {
-                // Try with new credentials
+                // 1. Try with new credentials
                 connection = DriverManager.getConnection(url, "burphub", "burphub_local");
             } catch (SQLException e) {
-                // 28000 is the SQLState for "Invalid authorization specification" (wrong
-                // user/pass)
                 if ("28000".equals(e.getSQLState())) {
-                    // Fallback to default H2 user (sa with empty password)
-                    try (Connection fallbackConn = DriverManager.getConnection(url, "sa", "")) {
-                        // Create the burphub user for future use
-                        try (Statement stmt = fallbackConn.createStatement()) {
-                            stmt.execute("CREATE USER IF NOT EXISTS burphub PASSWORD 'burphub_local' ADMIN");
+                    System.out.println("[*] BurpHub: New credentials failed, trying migration fallbacks...");
+
+                    Connection fallbackConn = null;
+                    try {
+                        // 2. Try default 'sa'
+                        fallbackConn = DriverManager.getConnection(url, "sa", "");
+                        System.out.println("[*] BurpHub: Connected via 'sa' user");
+                    } catch (SQLException e2) {
+                        try {
+                            // 3. Try default 'SA' (some OS/versions differ)
+                            fallbackConn = DriverManager.getConnection(url, "SA", "");
+                            System.out.println("[*] BurpHub: Connected via 'SA' user");
+                        } catch (SQLException e3) {
+                            // 4. Try without credentials (uses default or Windows auth if configured)
+                            fallbackConn = DriverManager.getConnection(url);
+                            System.out.println("[*] BurpHub: Connected without credentials");
                         }
                     }
-                    // Try connecting again with the newly created user
-                    connection = DriverManager.getConnection(url, "burphub", "burphub_local");
+
+                    if (fallbackConn != null) {
+                        try {
+                            // Migrate to burphub user
+                            try (Statement stmt = fallbackConn.createStatement()) {
+                                stmt.execute("CREATE USER IF NOT EXISTS burphub PASSWORD 'burphub_local' ADMIN");
+                                stmt.execute("ALTER USER burphub SET PASSWORD 'burphub_local'");
+                            }
+                        } finally {
+                            fallbackConn.close();
+                        }
+                        // Try again with the newly created/updated user
+                        connection = DriverManager.getConnection(url, "burphub", "burphub_local");
+                        System.out.println("[+] BurpHub: Database migrated to secure user");
+                    } else {
+                        throw e; // Give up
+                    }
                 } else {
-                    throw e; // Rethrow if it's a different error
+                    throw e;
                 }
             }
             createTables();
