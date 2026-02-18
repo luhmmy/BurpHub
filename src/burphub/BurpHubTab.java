@@ -149,12 +149,8 @@ public class BurpHubTab {
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-                // Fire emoji - Use a standard JLabel for better OS compatibility if custom
-                // drawing fails
-                // But let's try a safer font or drawing method first
-                g2d.setFont(new Font("Segoe UI", Font.BOLD, 28));
-                g2d.setColor(Color.WHITE);
-                g2d.drawString("\uD83D\uDD25", 0, 30);
+                // Draw a vector flame icon instead of emoji
+                drawFlame(g2d, 0, 5, 25, 30);
 
                 // Gradient text "BurpHub"
                 g2d.setFont(new Font("Segoe UI", Font.BOLD, 28));
@@ -1003,5 +999,40 @@ public class BurpHubTab {
         gbc.gridwidth = 2;
         panel.add(checkBox, gbc);
         gbc.gridwidth = 1; // reset
+    }
+
+    /**
+     * Helper to draw a flame icon using vector paths
+     */
+    private void drawFlame(Graphics2D g2d, int x, int y, int width, int height) {
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // Outer flame (Orange)
+        java.awt.geom.Path2D outer = new java.awt.geom.Path2D.Double();
+        outer.moveTo(x + width * 0.5, y + height);
+        outer.curveTo(x + width * 0.1, y + height, x, y + height * 0.7, x + width * 0.2, y + height * 0.4);
+        outer.curveTo(x + width * 0.1, y + height * 0.2, x + width * 0.4, y, x + width * 0.5, y + height * 0.2);
+        outer.curveTo(x + width * 0.6, y, x + width * 0.9, y + height * 0.2, x + width * 0.8, y + height * 0.4);
+        outer.curveTo(x + width, y + height * 0.7, x + width * 0.9, y + height, x + width * 0.5, y + height);
+        outer.closePath();
+
+        g2d.setColor(new Color(255, 100, 0));
+        g2d.fill(outer);
+
+        // Inner flame (Yellow/White)
+        java.awt.geom.Path2D inner = new java.awt.geom.Path2D.Double();
+        inner.moveTo(x + width * 0.5, y + height * 0.85);
+        inner.curveTo(x + width * 0.3, y + height * 0.85, x + width * 0.25, y + height * 0.65, x + width * 0.35,
+                y + height * 0.5);
+        inner.curveTo(x + width * 0.3, y + height * 0.4, x + width * 0.45, y + height * 0.3, x + width * 0.5,
+                y + height * 0.4);
+        inner.curveTo(x + width * 0.55, y + height * 0.3, x + width * 0.7, y + height * 0.4, x + width * 0.65,
+                y + height * 0.5);
+        inner.curveTo(x + width * 0.75, y + height * 0.65, x + width * 0.7, y + height * 0.85, x + width * 0.5,
+                y + height * 0.85);
+        inner.closePath();
+
+        g2d.setColor(new Color(255, 230, 0));
+        g2d.fill(inner);
     }
 }
