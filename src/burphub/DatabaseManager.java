@@ -37,8 +37,26 @@ public class DatabaseManager {
             Class.forName("org.h2.Driver");
 
             String url = DB_URL_PREFIX + dbPath;
-            // OWASP A07: Use credentials for defense-in-depth (local DB)
-            connection = DriverManager.getConnection(url, "burphub", "burphub_local");
+            try {
+                // Try with new credentials
+                connection = DriverManager.getConnection(url, "burphub", "burphub_local");
+            } catch (SQLException e) {
+                // 28000 is the SQLState for "Invalid authorization specification" (wrong
+                // user/pass)
+                if ("28000".equals(e.getSQLState())) {
+                    // Fallback to default H2 user (sa with empty password)
+                    try (Connection fallbackConn = DriverManager.getConnection(url, "sa", "")) {
+                        // Create the burphub user for future use
+                        try (Statement stmt = fallbackConn.createStatement()) {
+                            stmt.execute("CREATE USER IF NOT EXISTS burphub PASSWORD 'burphub_local' ADMIN");
+                        }
+                    }
+                    // Try connecting again with the newly created user
+                    connection = DriverManager.getConnection(url, "burphub", "burphub_local");
+                } else {
+                    throw e; // Rethrow if it's a different error
+                }
+            }
             createTables();
         } catch (ClassNotFoundException e) {
             throw new SQLException("H2 JDBC driver not found in classpath", e);
