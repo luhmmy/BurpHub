@@ -15,6 +15,12 @@ target/
 .mvn/
 mvnw
 mvnw.cmd
+apache-maven-*/
+maven.zip
+dependency-reduced-pom.xml
+
+# Gradle
+.gradle/
 
 # Database
 .burphub/
