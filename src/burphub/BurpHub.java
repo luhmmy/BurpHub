@@ -311,7 +311,9 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
             // Look for non-BurpHub, non-Burp internal classes
             if (!className.startsWith("burphub.") &&
                     !className.startsWith("java.") &&
+                    !className.startsWith("javax.") &&
                     !className.startsWith("sun.") &&
+                    !className.startsWith("jdk.") &&
                     !className.startsWith("burp.IBurp") &&
                     !className.startsWith("burp.IProxy") &&
                     !className.startsWith("burp.IHttp") &&
@@ -320,24 +322,35 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
                     !className.startsWith("burp.IMessage") &&
                     !className.startsWith("burp.IExtension") &&
                     !className.startsWith("burp.IContextMenu") &&
+                    !className.startsWith("burp.IScan") &&
+                    !className.startsWith("burp.IIntruder") &&
+                    !className.startsWith("burp.ITab") &&
+                    !className.startsWith("burp.IParameter") &&
+                    !className.startsWith("burp.ICookie") &&
+                    !className.startsWith("burp.IScopeChange") &&
+                    !className.startsWith("burp._") &&
+                    !className.startsWith("burp.vij") &&
+                    !className.startsWith("burp.a") &&
                     !className.equals("java.lang.Thread") &&
                     !className.contains(".ActivityTracker") &&
                     !className.contains(".CloudSync") &&
                     !className.contains(".DatabaseManager")) {
 
-                // Extract "extension" name from class package
+                // Extract extension name from class package
                 // e.g. "burp.Autorize.Autorize" -> "Autorize"
+                // e.g. "com.example.MyExtension" -> "MyExtension"
                 String[] parts = className.split("\\.");
                 if (parts.length > 2) {
-                    // Avoid returning purely "burp" or "internal"
-                    if (parts[parts.length - 2].equalsIgnoreCase("burp"))
+                    // Use the package name closest to the class for readability
+                    String pkg = parts[parts.length - 2];
+                    if (pkg.equalsIgnoreCase("burp") || pkg.equalsIgnoreCase("com") || pkg.equalsIgnoreCase("org"))
                         return parts[parts.length - 1];
-                    return parts[parts.length - 2];
+                    return pkg;
                 }
                 return parts[parts.length - 1];
             }
         }
-        return "Unknown Tool";
+        return "Unknown Extension";
     }
 
     private void startBackgroundSync() {
@@ -357,16 +370,24 @@ public class BurpHub implements IBurpExtender, IProxyListener, IHttpListener,
     }
 
     /**
-     * Scan for all loaded extensions and register them
+     * Scan for all loaded extensions and register them.
+     * Loads previously-detected extensions from the database so
+     * the tool list persists across sessions.
      */
     private void scanExtensions() {
         if (callbacks == null || tracker == null)
             return;
 
-        // Since we can't get names directly from the API, we'll rely on
-        // identifyExtension() during runtime traffic.
-        // We register a generic entry to ensure the UI space is initialized.
-        tracker.registerExtension("Extender Traffic");
+        // Load all previously-registered extensions from the database
+        try {
+            java.util.List<String> knownExtensions = database.getRegisteredExtensions();
+            for (String ext : knownExtensions) {
+                tracker.registerExtension(ext);
+            }
+        } catch (java.sql.SQLException e) {
+            // Not critical — extensions will be re-detected from traffic
+            e.printStackTrace();
+        }
     }
 
     @Override

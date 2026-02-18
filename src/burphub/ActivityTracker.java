@@ -101,6 +101,33 @@ public class ActivityTracker {
         try {
             database.incrementDailyStat(tool.column, 1);
             todayCounts.merge(tool, 1, Integer::sum);
+
+            // Check if streak recovery conditions are now met
+            checkStreakRecovery();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Check and apply streak recovery if conditions are met.
+     * Called automatically after each tool activity.
+     */
+    private boolean streakRecovered = false;
+
+    public boolean wasStreakRecovered() {
+        return streakRecovered;
+    }
+
+    public void clearRecoveryFlag() {
+        streakRecovered = false;
+    }
+
+    private void checkStreakRecovery() {
+        try {
+            if (database.applyStreakRecovery()) {
+                streakRecovered = true;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }

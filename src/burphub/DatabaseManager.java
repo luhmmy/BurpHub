@@ -96,6 +96,7 @@ public class DatabaseManager {
                             id INTEGER PRIMARY KEY,
                             current_streak INTEGER DEFAULT 0,
                             longest_streak INTEGER DEFAULT 0,
+                            previous_streak INTEGER DEFAULT 0,
                             last_active_date TEXT
                         )
                         """,
@@ -123,12 +124,18 @@ public class DatabaseManager {
             }
 
             // Initialize streaks row ONLY if it doesn't already exist
-            // (Using INSERT with NOT EXISTS to avoid overwriting existing streak data)
             stmt.execute("""
-                        INSERT INTO streaks (id, current_streak, longest_streak, last_active_date)
-                        SELECT 1, 0, 0, NULL
+                        INSERT INTO streaks (id, current_streak, longest_streak, previous_streak, last_active_date)
+                        SELECT 1, 0, 0, 0, NULL
                         WHERE NOT EXISTS (SELECT 1 FROM streaks WHERE id = 1)
                     """);
+
+            // Migration: add previous_streak column if it doesn't exist (for existing DBs)
+            try {
+                stmt.execute("ALTER TABLE streaks ADD COLUMN IF NOT EXISTS previous_streak INTEGER DEFAULT 0");
+            } catch (SQLException e) {
+                // Column may already exist
+            }
         }
     }
 
@@ -253,8 +260,8 @@ public class DatabaseManager {
      * Update streak tracking
      */
     public void updateStreak() throws SQLException {
-        String selectSql = "SELECT current_streak, longest_streak, last_active_date FROM streaks WHERE id = 1";
-        String updateSql = "UPDATE streaks SET current_streak = ?, longest_streak = ?, last_active_date = ? WHERE id = 1";
+        String selectSql = "SELECT current_streak, longest_streak, previous_streak, last_active_date FROM streaks WHERE id = 1";
+        String updateSql = "UPDATE streaks SET current_streak = ?, longest_streak = ?, previous_streak = ?, last_active_date = ? WHERE id = 1";
 
         try (Statement stmt = connection.createStatement();
                 ResultSet rs = stmt.executeQuery(selectSql)) {
@@ -262,6 +269,7 @@ public class DatabaseManager {
             if (rs.next()) {
                 int currentStreak = rs.getInt("current_streak");
                 int longestStreak = rs.getInt("longest_streak");
+                int previousStreak = rs.getInt("previous_streak");
                 String lastActive = rs.getString("last_active_date");
 
                 LocalDate todayDate = LocalDate.now();
@@ -280,7 +288,8 @@ public class DatabaseManager {
                         // Consecutive day - increase streak
                         currentStreak++;
                     } else {
-                        // Streak broken - reset
+                        // Streak broken - save old streak for possible recovery
+                        previousStreak = currentStreak;
                         currentStreak = 1;
                     }
                 }
@@ -293,10 +302,138 @@ public class DatabaseManager {
                 try (PreparedStatement pstmt = connection.prepareStatement(updateSql)) {
                     pstmt.setInt(1, currentStreak);
                     pstmt.setInt(2, longestStreak);
-                    pstmt.setString(3, todayStr);
+                    pstmt.setInt(3, previousStreak);
+                    pstmt.setString(4, todayStr);
                     pstmt.executeUpdate();
                 }
             }
+        }
+    }
+
+    /**
+     * Get distinct tools used today with >= minCount uses each.
+     * Returns the count of qualifying tools.
+     */
+    public int getDistinctToolsUsedMin(int minCount) throws SQLException {
+        ensureTodayExists();
+        String sql = "SELECT * FROM daily_stats WHERE date = ?";
+        int qualifyingTools = 0;
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, today());
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                if (rs.getInt("intercepted_requests") >= minCount)
+                    qualifyingTools++;
+                if (rs.getInt("repeater_requests") >= minCount)
+                    qualifyingTools++;
+                if (rs.getInt("intruder_requests") >= minCount)
+                    qualifyingTools++;
+                if (rs.getInt("scanner_requests") >= minCount)
+                    qualifyingTools++;
+                if (rs.getInt("spider_requests") >= minCount)
+                    qualifyingTools++;
+                if (rs.getInt("decoder_operations") >= minCount)
+                    qualifyingTools++;
+                if (rs.getInt("comparer_operations") >= minCount)
+                    qualifyingTools++;
+                if (rs.getInt("sequencer_operations") >= minCount)
+                    qualifyingTools++;
+                if (rs.getInt("extender_events") >= minCount)
+                    qualifyingTools++;
+                if (rs.getInt("target_additions") >= minCount)
+                    qualifyingTools++;
+            }
+        }
+        return qualifyingTools;
+    }
+
+    /**
+     * Apply streak recovery: restore previous streak + 1 day.
+     * Conditions: >= 1000 total requests AND >= 4 tools used >= 10 times.
+     * Returns true if recovery was applied.
+     */
+    public boolean applyStreakRecovery() throws SQLException {
+        String selectSql = "SELECT current_streak, previous_streak FROM streaks WHERE id = 1";
+        try (Statement stmt = connection.createStatement();
+                ResultSet rs = stmt.executeQuery(selectSql)) {
+            if (rs.next()) {
+                int currentStreak = rs.getInt("current_streak");
+                int previousStreak = rs.getInt("previous_streak");
+
+                // Recovery only possible on the day streak broke (current == 1) and there's a
+                // previous streak to recover
+                if (currentStreak > 1 || previousStreak <= 0) {
+                    return false;
+                }
+
+                // Check conditions
+                DailyStats todayStats = getTodayStats();
+                int totalRequests = todayStats.getTotalRequests();
+                int toolsUsed = getDistinctToolsUsedMin(10);
+
+                if (totalRequests >= 1000 && toolsUsed >= 4) {
+                    // Recovery! Restore previous streak + 1
+                    int restoredStreak = previousStreak + 1;
+                    int longestStreak = 0;
+                    try (ResultSet rs2 = stmt.executeQuery("SELECT longest_streak FROM streaks WHERE id = 1")) {
+                        if (rs2.next())
+                            longestStreak = rs2.getInt("longest_streak");
+                    }
+                    if (restoredStreak > longestStreak)
+                        longestStreak = restoredStreak;
+
+                    String updateSql = "UPDATE streaks SET current_streak = ?, longest_streak = ?, previous_streak = 0 WHERE id = 1";
+                    try (PreparedStatement pstmt = connection.prepareStatement(updateSql)) {
+                        pstmt.setInt(1, restoredStreak);
+                        pstmt.setInt(2, longestStreak);
+                        pstmt.executeUpdate();
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get streak recovery progress info
+     */
+    public StreakRecoveryInfo getStreakRecoveryInfo() throws SQLException {
+        String selectSql = "SELECT current_streak, previous_streak FROM streaks WHERE id = 1";
+        try (Statement stmt = connection.createStatement();
+                ResultSet rs = stmt.executeQuery(selectSql)) {
+            if (rs.next()) {
+                int currentStreak = rs.getInt("current_streak");
+                int previousStreak = rs.getInt("previous_streak");
+
+                boolean recoveryAvailable = (currentStreak <= 1 && previousStreak > 0);
+                int totalRequests = 0;
+                int toolsUsed = 0;
+
+                if (recoveryAvailable) {
+                    DailyStats todayStats = getTodayStats();
+                    totalRequests = todayStats.getTotalRequests();
+                    toolsUsed = getDistinctToolsUsedMin(10);
+                }
+
+                return new StreakRecoveryInfo(recoveryAvailable, previousStreak, totalRequests, toolsUsed);
+            }
+        }
+        return new StreakRecoveryInfo(false, 0, 0, 0);
+    }
+
+    public static class StreakRecoveryInfo {
+        public final boolean recoveryAvailable;
+        public final int previousStreak;
+        public final int totalRequests;
+        public final int toolsUsed;
+
+        public StreakRecoveryInfo(boolean available, int prevStreak, int requests, int tools) {
+            this.recoveryAvailable = available;
+            this.previousStreak = prevStreak;
+            this.totalRequests = requests;
+            this.toolsUsed = tools;
         }
     }
 
@@ -887,6 +1024,22 @@ public class DatabaseManager {
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, today());
             ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                list.add(rs.getString("name"));
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Get ALL registered extensions (not just today's active ones).
+     * Used to restore the tool list on startup.
+     */
+    public java.util.List<String> getRegisteredExtensions() throws SQLException {
+        java.util.List<String> list = new java.util.ArrayList<>();
+        String sql = "SELECT name FROM extensions ORDER BY name ASC";
+        try (Statement stmt = connection.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 list.add(rs.getString("name"));
             }

@@ -27,6 +27,13 @@ public class BurpHubTab {
     private JLabel totalTimeLabel;
     private JLabel activeDaysLabel;
 
+    // Streak recovery UI
+    private JPanel recoveryPanel;
+    private JLabel recoveryRequestsLabel;
+    private JLabel recoveryToolsLabel;
+    private JProgressBar recoveryRequestsBar;
+    private JProgressBar recoveryToolsBar;
+
     // Tool-specific labels (original 5)
     private JLabel proxyLabel;
     private JLabel repeaterLabel;
@@ -188,6 +195,73 @@ public class BurpHubTab {
 
         panel.add(titlePanel, BorderLayout.WEST);
         panel.add(streakPanel, BorderLayout.EAST);
+
+        // Streak recovery panel (shown only when recovery is available)
+        recoveryPanel = createStreakRecoveryPanel();
+        recoveryPanel.setVisible(false);
+
+        JPanel headerWrapper = new JPanel(new BorderLayout(0, 10));
+        headerWrapper.setOpaque(false);
+        headerWrapper.add(panel, BorderLayout.NORTH);
+        headerWrapper.add(recoveryPanel, BorderLayout.CENTER);
+
+        return headerWrapper;
+    }
+
+    private JPanel createStreakRecoveryPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(new Color(50, 35, 15));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ACCENT_ORANGE, 1),
+                BorderFactory.createEmptyBorder(10, 15, 10, 15)));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(3, 5, 3, 5);
+
+        // Title row
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 4;
+        JLabel title = new JLabel("⚡ Streak Recovery Available");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        title.setForeground(ACCENT_ORANGE);
+        panel.add(title, gbc);
+
+        // Requests progress
+        gbc.gridy = 1;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
+        recoveryRequestsLabel = new JLabel("Requests: 0/1000");
+        recoveryRequestsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        recoveryRequestsLabel.setForeground(TEXT_SECONDARY);
+        panel.add(recoveryRequestsLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        recoveryRequestsBar = new JProgressBar(0, 1000);
+        recoveryRequestsBar.setStringPainted(true);
+        recoveryRequestsBar.setBackground(new Color(30, 30, 30));
+        recoveryRequestsBar.setForeground(ACCENT_ORANGE);
+        recoveryRequestsBar.setPreferredSize(new Dimension(200, 18));
+        panel.add(recoveryRequestsBar, gbc);
+
+        // Tools progress
+        gbc.gridx = 2;
+        gbc.weightx = 0;
+        recoveryToolsLabel = new JLabel("Tools (10+ uses): 0/4");
+        recoveryToolsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        recoveryToolsLabel.setForeground(TEXT_SECONDARY);
+        panel.add(recoveryToolsLabel, gbc);
+
+        gbc.gridx = 3;
+        gbc.weightx = 0.5;
+        recoveryToolsBar = new JProgressBar(0, 4);
+        recoveryToolsBar.setStringPainted(true);
+        recoveryToolsBar.setBackground(new Color(30, 30, 30));
+        recoveryToolsBar.setForeground(ACCENT_ORANGE);
+        recoveryToolsBar.setPreferredSize(new Dimension(120, 18));
+        panel.add(recoveryToolsBar, gbc);
 
         return panel;
     }
@@ -457,6 +531,27 @@ public class BurpHubTab {
                     }
                     dynamicExtenderPanel.revalidate();
                     dynamicExtenderPanel.repaint();
+                }
+
+                // Update streak recovery progress
+                DatabaseManager.StreakRecoveryInfo recovery = database.getStreakRecoveryInfo();
+                if (recovery.recoveryAvailable) {
+                    recoveryPanel.setVisible(true);
+                    recoveryRequestsLabel.setText("Requests: " + recovery.totalRequests + "/1000");
+                    recoveryRequestsBar.setValue(Math.min(recovery.totalRequests, 1000));
+                    recoveryToolsLabel.setText("Tools (10+ uses): " + recovery.toolsUsed + "/4");
+                    recoveryToolsBar.setValue(Math.min(recovery.toolsUsed, 4));
+                } else {
+                    recoveryPanel.setVisible(false);
+                }
+
+                // Check if streak was just recovered
+                if (tracker.wasStreakRecovered()) {
+                    tracker.clearRecoveryFlag();
+                    DatabaseManager.StreakInfo updatedStreak = database.getStreakInfo();
+                    streakLabel.setText("⚡ " + updatedStreak.currentStreak + " day streak RECOVERED!");
+                    streakLabel.setForeground(ACCENT_ORANGE);
+                    recoveryPanel.setVisible(false);
                 }
 
             } catch (SQLException e) {
