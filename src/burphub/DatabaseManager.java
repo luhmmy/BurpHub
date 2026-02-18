@@ -37,7 +37,8 @@ public class DatabaseManager {
             Class.forName("org.h2.Driver");
 
             String url = DB_URL_PREFIX + dbPath;
-            connection = DriverManager.getConnection(url);
+            // OWASP A07: Use credentials for defense-in-depth (local DB)
+            connection = DriverManager.getConnection(url, "burphub", "burphub_local");
             createTables();
         } catch (ClassNotFoundException e) {
             throw new SQLException("H2 JDBC driver not found in classpath", e);
@@ -140,8 +141,9 @@ public class DatabaseManager {
 
     /**
      * Get database connection (for cloud sync)
+     * Package-private to prevent external access that bypasses column whitelist
      */
-    public Connection getConnection() {
+    Connection getConnection() {
         return connection;
     }
 

@@ -19,12 +19,14 @@ public class CloudSync {
     public static boolean syncData(String apiUrl, String apiKey, DatabaseManager database,
             IBurpExtenderCallbacks callbacks) {
         try {
-            // OWASP A02: Ensure secure transport
+            // OWASP A02: Enforce secure transport — BLOCK HTTP entirely
             if (apiUrl != null && !apiUrl.toLowerCase().startsWith("https://")) {
                 if (callbacks != null) {
                     new PrintWriter(callbacks.getStderr(), true)
-                            .println("[!] WARNING: Using insecure HTTP for cloud sync. HTTPS is highly recommended.");
+                            .println(
+                                    "[!] BLOCKED: Cloud sync requires HTTPS. Refusing to send data over insecure HTTP.");
                 }
+                return false;
             }
 
             // Build JSON payload

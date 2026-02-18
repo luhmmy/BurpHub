@@ -18,8 +18,8 @@ dependencies {
     // Burp Suite Extender API (provided at runtime by Burp)
     compileOnly 'net.portswigger.burp.extender:burp-extender-api:2.3'
     
-    // SQLite JDBC Driver (bundled in JAR)
-    implementation 'org.xerial:sqlite-jdbc:3.45.1.0'
+    // H2 Database Engine (bundled in JAR)
+    implementation 'com.h2database:h2:2.2.224'
 }
 
 sourceSets {
