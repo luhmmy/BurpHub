@@ -120,15 +120,15 @@ public class BurpHubTab {
 
         dashboardPanel.add(centerPanel, BorderLayout.CENTER);
 
-        tabbedPane.addTab("\uD83D\uDCCA Dashboard", dashboardPanel);
+        tabbedPane.addTab("Dashboard", dashboardPanel);
 
         // --- Tab 2: Wrapped ---
         WrapPanel wrapPanel = new WrapPanel(database);
-        tabbedPane.addTab("\uD83C\uDFB5 Wrapped", wrapPanel);
+        tabbedPane.addTab("Wrapped", wrapPanel);
 
         // --- Tab 3: Settings ---
         JPanel settingsPanel = createSettingsPanel(callbacks);
-        tabbedPane.addTab("\u2699 Settings", settingsPanel);
+        tabbedPane.addTab("Settings", settingsPanel);
 
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
 
@@ -152,7 +152,7 @@ public class BurpHubTab {
                 // Fire emoji - Use a standard JLabel for better OS compatibility if custom
                 // drawing fails
                 // But let's try a safer font or drawing method first
-                g2d.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 28));
+                g2d.setFont(new Font("Segoe UI", Font.BOLD, 28));
                 g2d.setColor(Color.WHITE);
                 g2d.drawString("\uD83D\uDD25", 0, 30);
 
@@ -187,8 +187,8 @@ public class BurpHubTab {
         JPanel streakPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 0));
         streakPanel.setOpaque(false);
 
-        streakLabel = createStreakBadge("🔥 0 day streak", ACCENT_ORANGE);
-        longestStreakLabel = createStreakBadge("🏆 Best: 0 days", TEXT_SECONDARY);
+        streakLabel = createStreakBadge(">> 0 day streak", ACCENT_ORANGE);
+        longestStreakLabel = createStreakBadge("* Best: 0 days", TEXT_SECONDARY);
 
         streakPanel.add(longestStreakLabel);
         streakPanel.add(streakLabel);
@@ -223,7 +223,7 @@ public class BurpHubTab {
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.gridwidth = 4;
-        JLabel title = new JLabel("⚡ Streak Recovery Available");
+        JLabel title = new JLabel(">> Streak Recovery Available");
         title.setFont(new Font("Segoe UI", Font.BOLD, 14));
         title.setForeground(ACCENT_ORANGE);
         panel.add(title, gbc);
@@ -349,7 +349,7 @@ public class BurpHubTab {
                 BorderFactory.createLineBorder(new Color(60, 60, 60), 1),
                 BorderFactory.createEmptyBorder(15, 15, 15, 15)));
 
-        JLabel title = new JLabel("📊 Today's Activity");
+        JLabel title = new JLabel("[+] Today's Activity");
         title.setFont(new Font("Segoe UI", Font.BOLD, 16));
         title.setForeground(TEXT_PRIMARY);
         panel.add(title, BorderLayout.NORTH);
@@ -366,20 +366,20 @@ public class BurpHubTab {
 
         // Helper to add rows consistently
         autoAddRow(gridPanel, gbc, row++, createStatLabel("Total Requests"), todayRequestsLabel = createStatValue("0"));
-        autoAddRow(gridPanel, gbc, row++, createStatLabel("🔍 Proxy"), proxyLabel = createStatValue("0"));
-        autoAddRow(gridPanel, gbc, row++, createStatLabel("🔄 Repeater"), repeaterLabel = createStatValue("0"));
-        autoAddRow(gridPanel, gbc, row++, createStatLabel("⚔️ Intruder"), intruderLabel = createStatValue("0"));
-        autoAddRow(gridPanel, gbc, row++, createStatLabel("🔬 Scanner"), scannerLabel = createStatValue("0"));
-        autoAddRow(gridPanel, gbc, row++, createStatLabel("🕷️ Spider"), spiderLabel = createStatValue("0"));
-        autoAddRow(gridPanel, gbc, row++, createStatLabel("🔤 Decoder (No API)"),
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("[P] Proxy"), proxyLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("[R] Repeater"), repeaterLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("[I] Intruder"), intruderLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("[S] Scanner"), scannerLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("[W] Spider"), spiderLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("[D] Decoder (No API)"),
                 decoderLabel = createDimmedStatValue("N/A"));
-        autoAddRow(gridPanel, gbc, row++, createStatLabel("⚖️ Comparer (No API)"),
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("[C] Comparer (No API)"),
                 comparerLabel = createDimmedStatValue("N/A"));
-        autoAddRow(gridPanel, gbc, row++, createStatLabel("🎲 Sequencer (No API)"),
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("[Q] Sequencer (No API)"),
                 sequencerLabel = createDimmedStatValue("N/A"));
-        autoAddRow(gridPanel, gbc, row++, createStatLabel("🔌 Extender"), extenderLabel = createStatValue("0"));
-        autoAddRow(gridPanel, gbc, row++, createStatLabel("🎯 Target"), targetLabel = createStatValue("0"));
-        autoAddRow(gridPanel, gbc, row++, createStatLabel("📝 Logger"), loggerLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("[E] Extender"), extenderLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("[T] Target"), targetLabel = createStatValue("0"));
+        autoAddRow(gridPanel, gbc, row++, createStatLabel("[L] Logger"), loggerLabel = createStatValue("0"));
 
         panel.add(gridPanel, BorderLayout.CENTER);
 
@@ -413,7 +413,7 @@ public class BurpHubTab {
                 BorderFactory.createLineBorder(new Color(60, 60, 60), 1),
                 BorderFactory.createEmptyBorder(15, 15, 15, 15)));
 
-        JLabel title = new JLabel("🏅 All-Time Stats");
+        JLabel title = new JLabel("[*] All-Time Stats");
         title.setFont(new Font("Segoe UI", Font.BOLD, 16));
         title.setForeground(TEXT_PRIMARY);
         panel.add(title, BorderLayout.NORTH);
@@ -480,8 +480,8 @@ public class BurpHubTab {
             try {
                 // Update streak
                 DatabaseManager.StreakInfo streak = database.getStreakInfo();
-                streakLabel.setText("🔥 " + streak.currentStreak + " day streak");
-                longestStreakLabel.setText("🏆 Best: " + streak.longestStreak + " days");
+                streakLabel.setText(">> " + streak.currentStreak + " day streak");
+                longestStreakLabel.setText("* Best: " + streak.longestStreak + " days");
 
                 // Update today's stats (original 5 tools)
                 proxyLabel.setText(String.valueOf(tracker.getInterceptedToday()));
@@ -526,7 +526,7 @@ public class BurpHubTab {
 
                     for (java.util.Map.Entry<String, Integer> entry : extenderCounts.entrySet()) {
                         autoAddRow(dynamicExtenderPanel, gbc_dyn, dRow++,
-                                createStatLabel("🔌 " + entry.getKey()),
+                                createStatLabel("[E] " + entry.getKey()),
                                 createStatValue(String.valueOf(entry.getValue())));
                     }
                     dynamicExtenderPanel.revalidate();
@@ -549,7 +549,7 @@ public class BurpHubTab {
                 if (tracker.wasStreakRecovered()) {
                     tracker.clearRecoveryFlag();
                     DatabaseManager.StreakInfo updatedStreak = database.getStreakInfo();
-                    streakLabel.setText("⚡ " + updatedStreak.currentStreak + " day streak RECOVERED!");
+                    streakLabel.setText(">> " + updatedStreak.currentStreak + " day streak RECOVERED!");
                     streakLabel.setForeground(ACCENT_ORANGE);
                     recoveryPanel.setVisible(false);
                 }

@@ -435,7 +435,7 @@ public class WrapPanel extends JPanel {
                     4), "slide4");
 
             slideContainer.add(createSummarySlide(
-                    "📊 Today's Recap",
+                    "[+] Today's Recap",
                     new String[] {
                             dailyData.totalRequests + " Total Requests",
                             dailyData.topTool + " (#1 Tool)",
@@ -532,7 +532,7 @@ public class WrapPanel extends JPanel {
             slideContainer.add(createBarChartSlide(), "slide7");
 
             slideContainer.add(createSummarySlide(
-                    "✨ " + currentYear + " in Review",
+                    "* " + currentYear + " in Review",
                     new String[] {
                             formatNumber(yearlyData.totalRequests) + " Total Requests",
                             yearlyData.topTool + " (#1 Tool)",
