@@ -165,19 +165,19 @@ public class DatabaseManager {
                 stmt.execute(sql);
             }
 
-            // Initialize streaks row ONLY if it doesn't already exist
-            stmt.execute("""
-                        INSERT INTO streaks (id, current_streak, longest_streak, previous_streak, last_active_date)
-                        SELECT 1, 0, 0, 0, NULL
-                        WHERE NOT EXISTS (SELECT 1 FROM streaks WHERE id = 1)
-                    """);
-
             // Migration: add previous_streak column if it doesn't exist (for existing DBs)
             try {
                 stmt.execute("ALTER TABLE streaks ADD COLUMN IF NOT EXISTS previous_streak INTEGER DEFAULT 0");
             } catch (SQLException e) {
                 // Column may already exist
             }
+
+            // Initialize streaks row ONLY if it doesn't already exist
+            stmt.execute("""
+                        INSERT INTO streaks (id, current_streak, longest_streak, previous_streak, last_active_date)
+                        SELECT 1, 0, 0, 0, NULL
+                        WHERE NOT EXISTS (SELECT 1 FROM streaks WHERE id = 1)
+                    """);
         }
     }
 
